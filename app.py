@@ -456,6 +456,20 @@ with tab3:
     
     st.markdown("---")
     
+    # Top Age Recommendations
+    st.subheader("👶 **Top Age Recommendations**")
+    st.markdown("""
+    <div style='font-size:1.1rem;'>
+    <b>Top Age Recommendations</b> menunjukkan usia pengguna yang paling banyak memainkan game Roblox.<br>
+    Informasi ini dapat digunakan untuk menyesuaikan konten dan fitur game agar lebih menarik bagi kelompok usia tertentu.
+    </div>
+    """, unsafe_allow_html=True)
+    age_df = (df["AgeRecommendation"].value_counts()
+                .reset_index()
+                .rename(columns={'count': 'Total Games'}))
+    st.dataframe(age_df.style.background_gradient(cmap='magma'), 
+                use_container_width=True, height=300)
+
     # Top Genres 
     st.subheader("🎨 **Top 10 Genres**")
     st.markdown("""
