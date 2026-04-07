@@ -188,10 +188,10 @@ unique_ages = sorted(df.get("AgeRecommendation", pd.Series()).dropna().unique().
 # =====================================================
 # HEADER
 # =====================================================
-st.markdown('<h1 class="main-header">🚀 Roblox Game Success Predictor</h1>', unsafe_allow_html=True)
+st.markdown('<h1 class="main-header">🚀 Roblox Game Success Classification</h1>', unsafe_allow_html=True)
 st.markdown(f"""
 <div style='text-align:center; color:#666; font-size:1.2rem; margin-bottom:2rem;'>
-    Prediksi kesuksesan game Roblox menggunakan <strong>Random Forest</strong><br>
+    Klasifikasi game populer dalam platform Roblox menggunakan <strong>Random Forest</strong><br>
 </div>
 """, unsafe_allow_html=True)
 
@@ -438,32 +438,6 @@ with tab2:
             <li><b>True Negative:</b> Game tidak sukses yang diprediksi tidak sukses</li>
             <li><b>False Positive:</b> Game tidak sukses yang diprediksi sukses</li>
             <li><b>False Negative:</b> Game sukses yang diprediksi tidak sukses</li>
-        </ul>
-        </div>
-        """, unsafe_allow_html=True)
-
-    #  Curve
-    st.subheader("📈 ** Curve**")
-    col_img, col_desc = st.columns([1, 2])
-    with col_img:
-        fig, ax = plt.subplots(figsize=(7, 5))
-        fpr, tpr = ["fpr"], ["tpr"]
-        ax.plot(fpr, tpr, color='#1f77b4', lw=3, 
-                label=f' Curve (AUC = {metrics["_auc"]:.3f})')
-        ax.plot([0,1], [0,1], color='gray', lw=2, linestyle='--', alpha=0.6)
-        ax.set_xlabel('False Positive Rate', fontweight='bold')
-        ax.set_ylabel('True Positive Rate', fontweight='bold')
-        ax.legend(fontsize=11); ax.grid(True, alpha=0.3)
-        ax.set_title(' Curve Analysis', fontweight='bold', pad=20)
-        st.pyplot(fig)
-    with col_desc:
-        st.markdown("""
-        <div style='font-size:1.1rem;'>
-        <b> Curve</b> menggambarkan kemampuan model membedakan antara game sukses dan tidak sukses.<br>
-        <ul>
-            <li><b>AUC (Area Under Curve):</b> Semakin mendekati 1, semakin baik model</li>
-            <li>Garis diagonal menunjukkan prediksi acak</li>
-            <li>Kurva di atas diagonal menunjukkan model lebih baik dari acak</li>
         </ul>
         </div>
         """, unsafe_allow_html=True)
