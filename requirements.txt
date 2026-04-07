@@ -1,0 +1,7 @@
+Streamlit   : 1.54.0
+Pandas      : 2.3.3
+NumPy       : 2.4.2
+Scikit-learn: 1.8.0
+Joblib      : 1.5.3
+Matplotlib  : 3.10.8
+Seaborn     : 0.13.2
