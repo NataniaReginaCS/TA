@@ -468,7 +468,7 @@ with tab3:
                 .reset_index()
                 .rename(columns={'count': 'Total Games'}))
     st.dataframe(age_df.style.background_gradient(cmap='magma'), 
-                use_container_width=True, height=300)
+                use_container_width=True, height=170)
 
     # Top Genres 
     st.subheader("🎨 **Top 10 Genres**")
