@@ -131,57 +131,6 @@ def load_model_and_artifacts():
         st.error(f"🚨 **Model loading failed:** {str(e)}")
         st.stop()
 
-def explain_prediction(model_pipeline, original_input_df, feature_cols, predicted_prob):
-    try:
-        preprocessor = model_pipeline.named_steps['preprocessor']
-        rf_model = model_pipeline.named_steps['model']
-
-        transformed_input = preprocessor.transform(original_input_df)
-        preprocessed_feature_names = preprocessor.get_feature_names_out()
-
-        if 'feature_selection' in model_pipeline.named_steps:
-            feature_selection = model_pipeline.named_steps['feature_selection']
-            selected_feature_mask = feature_selection.get_support()
-        else:
-            selected_feature_mask = np.ones(len(preprocessed_feature_names), dtype=bool)
-
-        final_selected_feature_names = preprocessed_feature_names[selected_feature_mask]
-
-        importances = rf_model.feature_importances_
-        transformed_input_df = pd.DataFrame(
-            transformed_input[:, selected_feature_mask],
-            columns=final_selected_feature_names,
-            index=original_input_df.index
-        )
-
-        raw_contributions = {}
-        for col_name, score in zip(final_selected_feature_names, importances):
-            raw_contributions[col_name] = (
-                transformed_input_df[col_name].iloc[0] * score
-                if col_name in transformed_input_df.columns else 0
-            )
-
-        raw_contrib_series = pd.Series(raw_contributions)
-        sum_abs_raw_contribs = raw_contrib_series.abs().sum()
-
-        normalized_contributions = []
-        if sum_abs_raw_contribs > 0:
-            for feature, raw_contrib in raw_contrib_series.items():
-                normalized_contrib = (raw_contrib / sum_abs_raw_contribs) * predicted_prob
-                normalized_contributions.append({"feature": feature, "contribution": normalized_contrib})
-        else:
-            for feature in raw_contrib_series.index:
-                normalized_contributions.append({"feature": feature, "contribution": 0.0})
-
-        exp_df = pd.DataFrame(normalized_contributions)
-        exp_df["abs_contribution"] = exp_df["contribution"].abs()
-        exp_df = exp_df.sort_values("abs_contribution", ascending=False).drop(columns="abs_contribution")
-        return exp_df.head(5)
-
-    except Exception as e:
-        st.error(f"Error generating explanation: {e}")
-        return None
-
 final_model, df, X_test, y_test, y_pred, y_prob, metrics, df_imp = load_model_and_artifacts()
 baseline_prob = float(np.mean(y_test))
 
@@ -336,50 +285,87 @@ with tab1:
         st.markdown("<div style='margin-top:2rem;'></div>", unsafe_allow_html=True)
 
         st.markdown("### 💡 **Rekomendasi Peningkatan**")
-        st.markdown("Berikut adalah fitur-fitur yang bisa difokuskan untuk meningkatkan peluang sukses game:")
+        st.markdown("Berikut fitur-fitur yang paling berpengaruh terhadap prediksi popularitas game kamu:")
+
+        # Ambil feature importance langsung dari RF model
         preprocessor_step = final_model.named_steps['preprocessor']
-        feature_selection_step = final_model.named_steps['feature_selection']
-        all_pessed_features_names = preprocessor_step.get_feature_names_out()
-        selected_features_mask = feature_selection_step.get_support()
-        final_feature_names = all_pessed_features_names[selected_features_mask]
+        rf_model = final_model.named_steps['model']
+
+        all_feature_names = preprocessor_step.get_feature_names_out()
+        importances = rf_model.feature_importances_
+
+        # Buat DataFrame feature importance
+        fi_df = pd.DataFrame({
+            'feature': all_feature_names,
+            'importance': importances
+        }).sort_values('importance', ascending=False)
+
+        transformed_input = preprocessor_step.transform(input_df)
+        transformed_input_series = pd.Series(
+            transformed_input[0], index=all_feature_names
+        )
 
         actionable_features = {
-            "num__update_gap_days": "Perpendek jarak antar update agar pemain tetap tertarik.",
-            "num__favorite_rate": "Buat fitur unik supaya lebih banyak pemain memfavoritkan game.",
-            "num__engagement_rate": "Dorong interaksi pemain, misal lewat event atau fitur komunitas.",
-            "num__like_ratio": "Perbaiki kualitas game agar rasio like lebih tinggi dari dislike.",
-            "cat__Genre_Action": "Untuk genre Action, fokus pada gameplay yang seru dan responsif.",
-            "cat__Genre_Adventure": "Genre Adventure: tambahkan cerita menarik dan area baru untuk dijelajahi.",
-            "cat__Genre_Education": "Genre Education: buat materi belajar lebih interaktif dan menyenangkan.",
-            "cat__Genre_Entertainment": "Genre Entertainment: tambahkan fitur hiburan dan visual yang menarik.",
-            "cat__Genre_Obby & Platformer": "Genre Obby/Platformer: desain level yang kreatif dan menantang.",
-            "cat__Genre_Party & Casual": "Genre Party/Casual: buat game mudah dimainkan bersama teman.",
-            "cat__Genre_Puzzle": "Genre Puzzle: tambahkan teka-teki baru yang inovatif.",
-            "cat__Genre_RPG": "Genre RPG: kembangkan cerita dan sistem karakter lebih dalam.",
-            "cat__Genre_Roleplay & Avatar Sim": "Genre Roleplay: tambahkan opsi kustomisasi dan fitur sosial.",
-            "cat__Genre_Shooter": "Genre Shooter: seimbangkan senjata dan tambahkan mode kompetitif.",
-            "cat__Genre_Simulation": "Genre Simulation: tingkatkan realisme dan variasi gameplay.",
-            "cat__Genre_Shopping": "Genre Shopping: tambahkan item unik dan sistem reward.",
-            "cat__AgeRecommendation_All Ages": "Pastikan konten aman dan ramah untuk semua umur.",
-            "cat__AgeRecommendation_Ages 9+": "Sesuaikan konten agar cocok untuk anak usia 9 tahun ke atas.",
-            "cat__AgeRecommendation_Ages 13+": "Tambahkan fitur yang menarik untuk remaja usia 13 tahun ke atas."
+            "num__update_gap_days": "🔄 **Update Gap Days**: Perpendek jarak antar update agar pemain tetap tertarik dan kembali bermain.",
+            "num__like_ratio": "👍 **Like Ratio**: Perbaiki kualitas gameplay, visual, dan cerita agar rasio like lebih tinggi dari dislike.",
+            "num__favorite_rate": "❤️ **Favorite Rate**: Buat fitur unik dan konten menarik supaya lebih banyak pemain memfavoritkan game.",
+            "num__engagement_rate": "💬 **Engagement Rate**: Dorong interaksi pemain melalui event, daily quest, atau fitur komunitas.",
+            "num__game_age": "📅 **Game Age**: Pertahankan konsistensi update dan promosi agar game tetap relevan seiring waktu.",
+            "cat__Genre_Simulation": "🏗️ **Genre Simulation**: Tingkatkan realisme dan tambahkan variasi gameplay yang lebih kaya.",
+            "cat__Genre_Survival": "🗡️ **Genre Survival**: Tambahkan tantangan baru, item, dan mekanisme bertahan hidup yang lebih beragam.",
+            "cat__Genre_Action": "⚔️ **Genre Action**: Fokus pada gameplay responsif, kontrol yang mulus, dan mode kompetitif.",
+            "cat__Genre_Adventure": "🗺️ **Genre Adventure**: Tambahkan area baru, cerita menarik, dan misi yang beragam untuk dieksplorasi.",
+            "cat__Genre_RPG": "🧙 **Genre RPG**: Kembangkan sistem karakter, storyline, dan elemen progression yang lebih dalam.",
+            "cat__Genre_Obby & Platformer": "🏃 **Genre Obby/Platformer**: Desain level yang kreatif, menantang, dan bervariasi.",
+            "cat__Genre_Party & Casual": "🎉 **Genre Party/Casual**: Buat game mudah dimainkan bersama teman dan tambahkan mode multiplayer.",
+            "cat__Genre_Puzzle": "🧩 **Genre Puzzle**: Tambahkan teka-teki baru yang inovatif dan sistem hints yang baik.",
+            "cat__Genre_Shooter": "🔫 **Genre Shooter**: Seimbangkan senjata, tambahkan mode kompetitif, dan perbaiki sistem matchmaking.",
+            "cat__Genre_Roleplay & Avatar Sim": "👗 **Genre Roleplay**: Tambahkan opsi kustomisasi yang lebih banyak dan fitur sosial yang menarik.",
+            "cat__AgeRecommendation_All Ages": "👶 **All Ages**: Pastikan konten aman, ramah, dan menarik untuk semua kelompok usia.",
+            "cat__AgeRecommendation_Ages 9+": "🧒 **Ages 9+**: Sesuaikan tingkat kesulitan dan konten agar cocok untuk anak usia 9 tahun ke atas.",
+            "cat__AgeRecommendation_Ages 13+": "🧑 **Ages 13+**: Tambahkan fitur yang lebih kompleks dan menarik untuk remaja usia 13 tahun ke atas.",
         }
+        top5_features = fi_df.head(5)
 
-        for feature_name in final_feature_names:
-            if feature_name not in actionable_features:
-                feature_display_name = feature_name.replace('num__', '').replace('cat__', '').replace('_', ' ').title()
-                actionable_features[feature_name] = f"Pertimbangkan untuk mengoptimalkan aspek '{feature_display_name}' untuk meningkatkan peluang sukses."
+        shown = 0
+        for _, row in top5_features.iterrows():
+            feat = row['feature']
+            importance = row['importance']
+            recommendation = actionable_features.get(
+                feat,
+                f"Optimalkan aspek **{feat.replace('num__','').replace('cat__','').replace('_',' ').title()}** untuk meningkatkan performa game."
+            )
 
-        features_to_improve = explanation_df[explanation_df['contribution'] < 0.001]
+            feature_val = transformed_input_series.get(feat, 0)
+            if feature_val >= 0:
+                status_icon = "✅"
+                status_text = "Sudah cukup baik"
+            else:
+                status_icon = "⚠️"
+                status_text = "Perlu ditingkatkan"
+            st.markdown(f"""
+            <div style='background:#f8f9fa; border-left:4px solid #1f77b4; 
+                        padding:12px 16px; border-radius:8px; margin-bottom:10px;'>
+                <div style='font-size:0.85rem; color:#888; margin-bottom:4px;'>
+                    Importance: {importance:.4f} &nbsp;|&nbsp; {status_icon} {status_text}
+                </div>
+                <div style='font-size:1rem;'>{recommendation}</div>
+            </div>
+            """, unsafe_allow_html=True)
+            shown += 1
+        if shown == 0:
+            st.info("Semua fitur utama sudah berkontribusi positif. Pertahankan kualitas game!")
 
-        if not features_to_improve.empty:
-            for _, row in features_to_improve.iterrows():
-                feature_name_original = row['feature'] 
-                recommendation = actionable_features.get(feature_name_original, f"Perbaiki aspek '{feature_name_original.replace('num__', '').replace('cat__', '').replace('_', ' ').title()}' untuk meningkatkan kontribusi positif.")
-                display_contribution = abs(row['contribution'])
-                st.markdown(f"- **{feature_name_original.replace('num__', '').replace('cat__', '').replace('_', ' ').title()}**: {recommendation} ")
+        # Saran tambahan berdasarkan hasil prediksi
+        st.markdown("---")
+        if pred == 1:
+            st.success("🚀 **Game kamu sudah berpotensi populer!** Pertahankan kualitas update dan terus tingkatkan engagement pemain.")
         else:
-            st.markdown("Semua fitur utama sudah berkontribusi positif. Fokus pada pengoptimalan lebih lanjut!")
+            st.warning("💡 **Tips untuk meningkatkan popularitas:**\n\n"
+                    "1. Rutin update game minimal 1–2 minggu sekali\n"
+                    "2. Aktif di komunitas Roblox dan media sosial\n"
+                    "3. Minta feedback pemain dan perbaiki gameplay\n"
+                    "4. Tambahkan event atau konten musiman")
 
 
 # =====================================================
