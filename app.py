@@ -133,12 +133,12 @@ def load_model_and_artifacts():
 
 def explain_prediction(model_pipeline, original_input_df, feature_cols, predicted_prob): 
     try: 
-        prepessor = model_pipeline.named_steps['prepessor'] 
+        preprocessor = model_pipeline.named_steps['preprocessor'] 
         feature_selection = model_pipeline.named_steps['feature_selection'] 
         rf_model = model_pipeline.named_steps['model']
 
-        transformed_input = prepessor.transform(original_input_df)
-        prepessed_feature_names = prepessor.get_feature_names_out()
+        transformed_input = preprocessor.transform(original_input_df)
+        prepessed_feature_names = preprocessor.get_feature_names_out()
 
         selected_feature_mask = feature_selection.get_support()
         final_selected_feature_names = prepessed_feature_names[selected_feature_mask]
@@ -452,7 +452,6 @@ with tab3:
     col1, col2, col3 = st.columns(3)
     with col1: st.metric("📊 Total Samples", f"{len(df):,}")
     with col2: st.metric("🔧 Features", df.shape[1])
-    with col3: st.metric("🎨 Unique Genres", df["Genre"].nunique())
     
     st.markdown("---")
     
@@ -465,6 +464,7 @@ with tab3:
     </div>
     """, unsafe_allow_html=True)
     age_df = (df["AgeRecommendation"].value_counts()
+                .head(10)
                 .reset_index()
                 .rename(columns={'count': 'Total Games'}))
     st.dataframe(age_df.style.background_gradient(cmap='magma'), 
