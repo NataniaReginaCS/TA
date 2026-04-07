@@ -158,7 +158,7 @@ with col1:
     st.markdown(f"""
     <div class="metric-card">
         <h3>🎯 F1 Score</h3>
-        <h2>{metrics['f1_score']:.3f}</h2>
+        <h2>{metrics['f1_score_macro']:.3f}</h2>
     </div>
     """, unsafe_allow_html=True)
 
