@@ -131,34 +131,39 @@ def load_model_and_artifacts():
         st.error(f"🚨 **Model loading failed:** {str(e)}")
         st.stop()
 
-def explain_prediction(model_pipeline, original_input_df, feature_cols, predicted_prob): 
-    try: 
-        preprocessor = model_pipeline.named_steps['preprocessor'] 
-        feature_selection = model_pipeline.named_steps['feature_selection'] 
+def explain_prediction(model_pipeline, original_input_df, feature_cols, predicted_prob):
+    try:
+        preprocessor = model_pipeline.named_steps['preprocessor']
         rf_model = model_pipeline.named_steps['model']
 
         transformed_input = preprocessor.transform(original_input_df)
-        prepessed_feature_names = preprocessor.get_feature_names_out()
+        preprocessed_feature_names = preprocessor.get_feature_names_out()
 
-        selected_feature_mask = feature_selection.get_support()
-        final_selected_feature_names = prepessed_feature_names[selected_feature_mask]
-    
+        if 'feature_selection' in model_pipeline.named_steps:
+            feature_selection = model_pipeline.named_steps['feature_selection']
+            selected_feature_mask = feature_selection.get_support()
+        else:
+            selected_feature_mask = np.ones(len(preprocessed_feature_names), dtype=bool)
+
+        final_selected_feature_names = preprocessed_feature_names[selected_feature_mask]
+
         importances = rf_model.feature_importances_
-        transformed_input_df = pd.DataFrame(transformed_input[:, selected_feature_mask],
-                                        columns=final_selected_feature_names,
-                                        index=original_input_df.index)
+        transformed_input_df = pd.DataFrame(
+            transformed_input[:, selected_feature_mask],
+            columns=final_selected_feature_names,
+            index=original_input_df.index
+        )
 
         raw_contributions = {}
         for col_name, score in zip(final_selected_feature_names, importances):
-            if col_name in transformed_input_df.columns:
-                raw_contributions[col_name] = transformed_input_df[col_name].iloc[0] * score
-            else:
-                raw_contributions[col_name] = 0 
-        
-        raw_contrib_series = pd.Series(raw_contributions)
+            raw_contributions[col_name] = (
+                transformed_input_df[col_name].iloc[0] * score
+                if col_name in transformed_input_df.columns else 0
+            )
 
+        raw_contrib_series = pd.Series(raw_contributions)
         sum_abs_raw_contribs = raw_contrib_series.abs().sum()
-        
+
         normalized_contributions = []
         if sum_abs_raw_contribs > 0:
             for feature, raw_contrib in raw_contrib_series.items():
@@ -170,8 +175,7 @@ def explain_prediction(model_pipeline, original_input_df, feature_cols, predicte
 
         exp_df = pd.DataFrame(normalized_contributions)
         exp_df["abs_contribution"] = exp_df["contribution"].abs()
-        exp_df = exp_df.sort_values("abs_contribution", ascending=False)
-        exp_df = exp_df.drop(columns="abs_contribution")
+        exp_df = exp_df.sort_values("abs_contribution", ascending=False).drop(columns="abs_contribution")
         return exp_df.head(5)
 
     except Exception as e:
