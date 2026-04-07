@@ -199,7 +199,7 @@ st.markdown(f"""
 # PERFORMANCE METRICS
 # =====================================================
 st.markdown("### 📊 **Model Performance Overview**")
-col1, col2, col3 = st.columns(3)
+col1, col2= st.columns(2)
 
 with col1:
     st.markdown(f"""
@@ -214,14 +214,6 @@ with col2:
     <div class="metric-card">
         <h3>✅ Accuracy</h3>
         <h2>{metrics['accuracy']:.1%}</h2>
-    </div>
-    """, unsafe_allow_html=True)
-
-with col3:
-    st.markdown(f"""
-    <div class="metric-card">
-        <h3>📈  AUC</h3>
-        <h2>{metrics['_auc']:.3f}</h2>
     </div>
     """, unsafe_allow_html=True)
 
