@@ -254,13 +254,6 @@ with tab1:
                 "AgeRecommendation"
             ]
 
-            explanation_df = explain_prediction(
-                final_model,
-                input_df[feature_cols],
-                feature_cols,
-                prob 
-            )
-
         # Display result
         if pred == 1:
             st.markdown(f"""
