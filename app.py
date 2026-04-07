@@ -199,7 +199,7 @@ st.markdown(f"""
 # PERFORMANCE METRICS
 # =====================================================
 st.markdown("### 📊 **Model Performance Overview**")
-col1, col2= st.columns(2)
+col1, col2, col4, col5= st.columns(4)
 
 with col1:
     st.markdown(f"""
@@ -216,9 +216,6 @@ with col2:
         <h2>{metrics['accuracy']:.1%}</h2>
     </div>
     """, unsafe_allow_html=True)
-
-col4, col5 = st.columns(2)
-st.markdown("<div style='margin-top:1rem;'></div>", unsafe_allow_html=True)
 
 with col4:
     st.markdown(f"""
