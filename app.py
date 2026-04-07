@@ -333,9 +333,9 @@ with tab1:
 
         st.markdown("### 💡 **Rekomendasi Peningkatan**")
         st.markdown("Berikut adalah fitur-fitur yang bisa difokuskan untuk meningkatkan peluang sukses game:")
-        prepessor_step = final_model.named_steps['prepessor']
+        preprocessor_step = final_model.named_steps['preprocessor']
         feature_selection_step = final_model.named_steps['feature_selection']
-        all_pessed_features_names = prepessor_step.get_feature_names_out()
+        all_pessed_features_names = preprocessor_step.get_feature_names_out()
         selected_features_mask = feature_selection_step.get_support()
         final_feature_names = all_pessed_features_names[selected_features_mask]
 
