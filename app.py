@@ -318,86 +318,28 @@ with tab1:
 
         st.markdown("<div style='margin-top:2rem;'></div>", unsafe_allow_html=True)
 
-        st.markdown("### 💡 **Performance vs Top Games**")
+        success_df = df.loc[X_test[y_pred == 1].index]
 
-        try:
-            # SAFE index alignment
-            test_indices = X_test.index
-            test_df = df.loc[test_indices].copy()
-            test_df['predicted_success'] = y_pred
-            
-            # Success games only
-            success_df = test_df[test_df['predicted_success'] == 1]
-            
-            # RAW BENCHMARKS
-            raw_benchmarks = {
-                'game_age': int(success_df['game_age'].median()),
-                'update_gap_days': int(success_df['update_gap_days'].median()),
-                'visits': int(success_df['visits'].median()),
-                'favorites': int(success_df['favorites'].median()),
-                'like_ratio': round((success_df['likes']/(success_df['likes']+success_df['dislikes'])).median() * 100, 1),
-            }
-            
-            # 5 KEY METRICS
-            metrics_display = [
-                {"icon": "🔄", "name": "Update Gap", "your": update_gap, "top": raw_benchmarks['update_gap_days'], "unit": "days"},
-                {"icon": "📅", "name": "Game Age", "your": game_age, "top": raw_benchmarks['game_age'], "unit": "days"},
-                {"icon": "👍", "name": "Like Ratio", "your": round(likes/(likes+dislikes)*100, 1), "top": raw_benchmarks['like_ratio'], "unit": "%"},
-                {"icon": "❤️", "name": "Favorites", "your": favorites, "top": raw_benchmarks['favorites'], "unit": ""},
-                {"icon": "👥", "name": "Visits", "your": visits, "top": raw_benchmarks['visits'], "unit": ""},
-            ]
-            
-            for metric in metrics_display:
-                your_val = metric['your']
-                top_val = metric['top']
-                
-                # Status logic
-                if your_val > top_val * 1.1:
-                    status, color = "🟢 Top Tier", "#d4edda"
-                elif your_val > top_val:
-                    status, color = "✅ Above Avg", "#c3e6cb"
-                elif your_val > top_val * 0.8:
-                    status, color = "➖ Average", "#fff3cd"
-                else:
-                    status, color = "⚠️ Below Avg", "#f8d7da"
-                
-                st.markdown(f"""
-                <div style='background:{color}; border-left:6px solid #1f77b4; 
-                            padding:18px 22px; border-radius:15px; margin:12px 0;'>
-                    <div style='display:flex; justify-content:space-between;'>
-                        <div>
-                            <div style='font-size:1.3rem; font-weight:bold; color:#1f77b4;'>
-                                {metric['icon']} **{metric['name']}**
-                            </div>
-                            <div style='font-size:1.1rem; margin-top:6px;'>
-                                Kamu: <strong>{your_val:,.0f}{metric['unit']}</strong> | 
-                                Top Games: <strong>{top_val:,.0f}{metric['unit']}</strong>
-                            </div>
-                        </div>
-                        <div style='font-size:2.5rem; font-weight:bold; color:#28a745;'>
-                            {status.split()[0]}
-                        </div>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-                
-        except Exception as e:
-            st.error(f"Analysis error: {e}")
-            st.info("Using fallback benchmarks")
-            
-            # FALLBACK
-            fallback_benchmarks = {'update_gap_days': 10, 'game_age': 180, 'like_ratio': 85}
-            st.markdown("""
-            🔄 Update Gap: 30 vs 10 days | ➖ Average
-            📅 Game Age: 300 vs 180 days | ✅ Above Avg  
-            👍 Like Ratio: 91% vs 85% | 🟢 Top Tier
-            """)
+        raw_benchmarks = {
+            'game_age': f"{success_df['game_age'].median():.0f} days",
+            'update_gap_days': f"{success_df['update_gap_days'].median():.0f} days", 
+            'like_ratio': f"{(success_df['like_ratio'].median()*100):.0f}%",
+            'favorite_rate': f"{(success_df['favorite_rate'].median()*100):.0f}%",
+            'engagement_rate': f"{(success_df['engagement_rate'].median()*100):.0f}%"
+        }
 
-        st.markdown("---")
-        if pred == 1:
-            st.success(f"🎉 **HIGH POTENTIAL** ({prob:.1%})")
-        else:
-            st.warning(f"⚠️ **OPTIMIZE** ({prob:.1%}) - Focus ⚠️ metrics!")
+        # Display
+        st.markdown("### 💡 **Your Game vs Top Performers**")
+
+        col1, col2 = st.columns(2)
+        with col1:
+            st.metric("📅 Game Age", f"{game_age} days", f"{success_df['game_age'].median():.0f} days")
+            st.metric("🔄 Update Gap", f"{update_gap} days", f"{success_df['update_gap_days'].median():.0f} days")
+
+        with col2:
+            st.metric("👍 Like Ratio", f"{likes/(likes+dislikes+1)*100:.0f}%", f"{success_df['like_ratio'].median()*100:.0f}%")
+            st.metric("❤️ Favorite Rate", f"{favorites/(visits+1)*100:.0f}%", f"{success_df['favorite_rate'].median()*100:.0f}%")
+            st.metric("👥 Engagement", f"{(likes+dislikes)/(visits+1)*100:.0f}%", f"{success_df['engagement_rate'].median()*100:.0f}%")
 # =====================================================
 # TAB 2: ANALYTICS 
 # =====================================================
