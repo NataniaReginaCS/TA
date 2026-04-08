@@ -447,8 +447,8 @@ with tab3:
     </div>
     """, unsafe_allow_html=True)
     age_df = pd.DataFrame({
-        'AgeRecommendation': df['AgeRecommendation'],
-        'Predicted_Success': y_pred  # Model prediction!
+        'AgeRecommendation': df.loc[X_test.index, 'AgeRecommendation'], 
+        'Predicted_Success': y_pred
     }).groupby('AgeRecommendation')['Predicted_Success'].agg(['count', 'mean']).round(3)
     age_df.columns = ['Total Games', 'Success Rate']
     age_df = age_df.sort_values('Success Rate', ascending=False).head(10).reset_index()
