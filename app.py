@@ -152,63 +152,27 @@ st.markdown(f"""
 # PERFORMANCE METRICS
 # =====================================================
 st.markdown("### 📊 **Model Performance Overview**")
-col1, col2, col3, col4, col5, col6, col7= st.columns(7)
 
-with col1:
-    st.markdown(f"""
-    <div class="metric-card">
-        <h3>🎯 F1 Score</h3>
-        <h2>{metrics['f1_score']:.3f}</h2>
-    </div>
-    """, unsafe_allow_html=True)
+def safe_metric(key, default=0.0):
+    return metrics.get(key, default)
 
-with col2:
-    st.markdown(f"""
-    <div class="metric-card">
-        <h3>✅ Accuracy</h3>
-        <h2>{metrics['accuracy']:.1%}</h2>
-    </div>
-    """, unsafe_allow_html=True)
+icons = ['🎯', '✅', '📊', '🔍', '🎯', '📈', '🔍']
+titles = ['F1 Score', 'Accuracy', 'Precision', 'Recall', 'F1 Macro', 'Precision Macro', 'Recall Macro']
+keys = ['f1_score', 'accuracy', 'precision', 'recall', 'f1_score_macro', 'precision_macro', 'recall_macro']
 
-with col3:
-    st.markdown(f"""
-    <div class="metric-card">
-        <h3>🎯 Precision</h3>
-        <h2>{metrics['precision']:.3f}</h2>
-    </div>
-    """, unsafe_allow_html=True)
+col1, col2, col3, col4, col5, col6, col7 = st.columns(7)
 
-with col4:
-    st.markdown(f"""
-    <div class="metric-card">
-        <h3>🎯 Recall</h3>
-        <h2>{metrics['recall']:.3f}</h2>
-    </div>
-    """, unsafe_allow_html=True)
+for i, (icon, title, key) in enumerate(zip(icons, titles, keys)):
+    value = safe_metric(key)
+    with st.columns(7)[i]:
+        st.markdown(f"""
+        <div class="metric-card">
+            <h3>{icon} {title}</h3>
+            <h2>{value:.3f if isinstance(value, float) else f'{value:.1%}'}</h2>
+        </div>
+        """, unsafe_allow_html=True)
 
-with col5:
-    st.markdown(f"""
-    <div class="metric-card">
-        <h3>🎯 F1 Score macro</h3>
-        <h2>{metrics['f1_score_macro']:.3f}</h2>
-    </div>
-    """, unsafe_allow_html=True)
 
-with col6:
-    st.markdown(f"""
-    <div class="metric-card">
-        <h3>🎯 Precision macro</h3>
-        <h2>{metrics['precision_macro']:.3f}</h2>
-    </div>
-    """, unsafe_allow_html=True)
-
-with col7:
-    st.markdown(f"""
-    <div class="metric-card">
-        <h3>🎯 Recall macro</h3>
-        <h2>{metrics['recall_macro']:.3f}</h2>
-    </div>
-    """, unsafe_allow_html=True)
 
 # =====================================================
 # TABS
