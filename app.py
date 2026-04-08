@@ -448,19 +448,32 @@ with tab3:
     """, unsafe_allow_html=True)
 
     try:
-        age_df = pd.crosstab(df.loc[X_test.index, 'AgeRecommendation'], y_pred, 
-                            normalize='index').round(3).reset_index()
-        age_df.columns = ['AgeRecommendation', 'Not Success', 'Success', 'Success Rate']
-        age_df['Total Games'] = (age_df['Not Success'] + age_df['Success']).round(0)
-        age_df = age_df[['AgeRecommendation', 'Total Games', 'Success Rate']].sort_values('Success Rate', ascending=False).head(10)
+        test_df = df.loc[X_test.index].copy()  
+        test_df['Predicted_Success'] = y_pred
+
+        age_stats = test_df.groupby('AgeRecommendation')['Predicted_Success'].agg([
+            'count',           
+            'mean'             
+        ]).round(3)
         
-        st.dataframe(age_df.style.format({'Success Rate': '{:.1%}', 'Total Games': '{:.0f}'})
-                    .background_gradient(subset=['Success Rate'], cmap='plasma'), 
-                    use_container_width=True, height=200)
-                
+        age_stats.columns = ['Total Games', 'Success Rate']
+        age_stats['Success Rate %'] = (age_stats['Success Rate'] * 100).round(1)
+        age_df = age_stats.sort_values('Success Rate', ascending=False).head(10).reset_index()
+        
+        # Format display
+        display_df = age_df[['AgeRecommendation', 'Total Games', 'Success Rate %']]
+        display_df.columns = ['Age Recommendation', 'Total Games', 'Success Rate']
+        
+        st.dataframe(display_df.style.format({
+            'Total Games': '{:.0f}', 
+            'Success Rate': '{:.1f}%'
+        }).background_gradient(subset=['Success Rate'], cmap='plasma'), 
+        use_container_width=True, height=200)
+        
     except Exception as e:
-        st.warning(f"📊 Age insights temporarily unavailable: {e}")
-        st.info("Model test set alignment needed")
+        st.error(f"Error: {e}")
+        st.info("Pastikan df, X_test, y_pred sudah selaras")
+
     # Top Genres 
     st.subheader("🎨 **Top 10 Genres**")
     st.markdown("""
@@ -469,14 +482,30 @@ with tab3:
     Dengan melihat genre teratas, Anda dapat memahami tren kategori game yang paling diminati dan merencanakan pengembangan konten yang sesuai.
     </div>
     """, unsafe_allow_html=True) 
-    genre_df = pd.DataFrame({
-        'Genre': df['Genre'],
-        'Predicted_Success': y_pred
-    }).groupby('Genre')['Predicted_Success'].agg(['count', 'mean']).round(3)
-    genre_df.columns = ['Total Games', 'Success Rate']
-    genre_df = genre_df.sort_values('Success Rate', ascending=False).head(10).reset_index()
-    st.dataframe(genre_df.style.background_gradient(cmap='viridis'), 
-                use_container_width=True, height=300)
+
+    try:
+        test_df = df.loc[X_test.index].copy()
+        test_df['Predicted_Success'] = y_pred
+        
+        genre_stats = test_df.groupby('Genre')['Predicted_Success'].agg([
+            'count', 'mean'
+        ]).round(3)
+        
+        genre_stats.columns = ['Total Games', 'Success Rate']
+        genre_stats['Success Rate %'] = (genre_stats['Success Rate'] * 100).round(1)
+        genre_df = genre_stats.sort_values('Success Rate', ascending=False).head(10).reset_index()
+        
+        display_df = genre_df[['Genre', 'Total Games', 'Success Rate %']]
+        display_df.columns = ['Genre', 'Total Games', 'Success Rate']
+        
+        st.dataframe(display_df.style.format({
+            'Total Games': '{:.0f}', 
+            'Success Rate': '{:.1f}%'
+        }).background_gradient(subset=['Success Rate'], cmap='viridis'), 
+        use_container_width=True, height=300)
+        
+    except Exception as e:
+        st.error(f"Error: {e}")
     
     # Dataset Statistics 
     st.subheader("📈 **Dataset Statistics**")
