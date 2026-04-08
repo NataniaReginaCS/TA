@@ -327,47 +327,54 @@ with tab1:
         importances = rf_model.feature_importances_
 
         # Top 3 LOWEST performing features
-        lowest_idx = np.argsort(importances)[-3:][::-1]  # Highest impact first
-        top3_low = []
+        top_idx = np.argsort(importances)[-3:][::-1]
+        top_features = []
 
-        for i in lowest_idx:
+        for i in top_idx:
             feat_name = feature_names[i]
             clean_name = feat_name.replace('num__', '').replace('cat__', '').replace('_', ' ').title()
-            
-            # Simple advice based on feature
-            advice = {
-                'like ratio': 'Perbanyak likes, kurangi dislikes (improve quality)',
-                'update gap days': 'Update lebih sering (7-14 hari)',
-                'game age': 'Promosi lebih agresif (bangun traction)',
-                'favorite rate': 'Tambah unique features (make shareable)',
-                'engagement rate': 'Event/quest untuk boost interaction',
-            }.get(feat_name.lower(), 'Optimasi feature ini')
-            
-            top3_low.append({
+
+            # Ambil nilai input user
+            value_map = {
+                'favorite_rate': favorite_rate,
+                'engagement_rate': engagement_rate,
+                'like_ratio': like_ratio,
+                'game_age': game_age,
+                'update_gap_days': update_gap_days
+            }
+
+            val = value_map.get(feat_name.replace('num__',''), None)
+
+            # Logika rekomendasi realistis
+            if feat_name.lower() == 'like_ratio':
+                advice = "Tingkatkan kualitas game untuk meningkatkan like ratio"
+            elif feat_name.lower() == 'engagement_rate':
+                advice = "Tambahkan fitur interaktif seperti event atau quest"
+            elif feat_name.lower() == 'favorite_rate':
+                advice = "Buat game lebih menarik untuk meningkatkan favorit"
+            elif feat_name.lower() == 'update_gap_days':
+                advice = "Lakukan update secara lebih rutin"
+            elif feat_name.lower() == 'game_age':
+                advice = "Tingkatkan promosi untuk mempercepat pertumbuhan awal"
+            else:
+                advice = "Optimasi fitur ini"
+
+            top_features.append({
                 'name': clean_name,
                 'importance': importances[i],
+                'value': val,
                 'advice': advice
             })
 
-        # Display ONLY needs improvement
-        for item in top3_low:
+        for feat in top_features:
             st.markdown(f"""
-            <div style='background:#fff3cd; border-left:6px solid #ffc107; 
-                        padding:20px; border-radius:12px; margin:15px 0;'>
-                <div style='font-size:1.4rem; font-weight:bold; color:#856404;'>
-                    #{top3_low.index(item)+1} {item['name']}
-                </div>
-                <div style='font-size:1.1rem; color:#665a00; margin-top:10px;'>
-                    💡 **{item['advice']}**
-                </div>
-                <div style='font-size:0.9rem; color:#aa8800; margin-top:8px;'>
-                    Impact: {item['importance']:.0%}
-                </div>
+            <div style='background:#f8f9fa; padding:1rem; border-radius:12px; margin-bottom:1rem; border:1px solid #e6e6e6;'>
+                <h3 style='margin:0; color:#333;'>{feat['name']} (Importance: {feat['importance']:.4f})</h3>
+                <p style='margin:0.5rem 0 0 0; color:#555;'>Current Value: <b>{feat['value']:.4f}</b></p>
+                <p style='margin:0.5rem 0 0 0; color:#777;'>{feat['advice']}</p>
             </div>
             """, unsafe_allow_html=True)
-
-        if not top3_low:
-            st.success("✅ Semua fitur sudah optimal!")
+        
     # =====================================================
 # TAB 2: ANALYTICS 
 # =====================================================
