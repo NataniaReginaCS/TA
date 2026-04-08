@@ -320,66 +320,87 @@ with tab1:
 
         st.markdown("### 💡 **Key Feature Analysis**")
 
-        try:
-            rf_model = final_model.named_steps['model']
-            preprocessor = final_model.named_steps['preprocessor']
+        success_df = df.loc[y_pred == 1]
+        raw_benchmarks = {
+            'game_age': int(success_df['game_age'].median()),
+            'update_gap_days': int(success_df['update_gap_days'].median()),
+            'visits': int(success_df['visits'].median()),
+            'favorites': int(success_df['favorites'].median()),
+            'like_ratio': round((success_df['likes']/(success_df['likes']+success_df['dislikes'])).median() * 100, 1),
+            'favorite_rate': round((success_df['favorites']/success_df['visits']).median() * 100, 1),
+        }
 
-            feature_names = preprocessor.get_feature_names_out()
-            importances = rf_model.feature_importances_
+        # 5 KEY METRICS - RAW & EASY
+        metrics_display = [
+            {
+                "icon": "🔄", "name": "Update Gap", 
+                "your": update_gap, "top": raw_benchmarks['update_gap_days'],
+                "unit": "days"
+            },
+            {
+                "icon": "📅", "name": "Game Age", 
+                "your": game_age, "top": raw_benchmarks['game_age'],
+                "unit": "days"
+            },
+            {
+                "icon": "👍", "name": "Like Ratio", 
+                "your": round(likes/(likes+dislikes)*100, 1), 
+                "top": raw_benchmarks['like_ratio'],
+                "unit": "%"
+            },
+            {
+                "icon": "❤️", "name": "Favorites", 
+                "your": favorites, "top": raw_benchmarks['favorites'],
+                "unit": ""
+            },
+            {
+                "icon": "👥", "name": "Visits", 
+                "your": visits, "top": raw_benchmarks['visits'],
+                "unit": ""
+            }
+        ]
 
-            top_idx = np.argsort(importances)[-5:][::-1]
-            top_features = feature_names[top_idx]
-            top_importance = importances[top_idx]
-
-            input_transformed = preprocessor.transform(input_df)
-
-            success_mask = y_pred == 1
-            success_features = preprocessor.transform(df.loc[X_test[success_mask].index])
-            feature_medians = np.median(success_features, axis=0)
-
-            for j in range(5):
-                feat_idx = top_idx[j]
-                feat_name = feature_names[feat_idx]
-                feat_value = input_transformed[0, feat_idx]
-                feat_importance = importances[feat_idx]
-                feat_median = feature_medians[feat_idx]
-
-                percentile = ((feat_value - feat_median) / feat_median * 100) if feat_median > 0 else 0
-                
-                if percentile > 20:
-                    status, color = "🏆 Top Tier", "#d4edda"
-                elif percentile > 0:
-                    status, color = "✅ Good", "#c3e6cb"
-                elif percentile > -20:
-                    status, color = "➖ Average", "#fff3cd"
-                else:
-                    status, color = "⚠️ Improve", "#f8d7da"
-                
-                clean_name = feat_name.replace('num__', '').replace('cat__', '').replace('_', ' ').title()
-                
-                st.markdown(f"""
-                <div style='background:{color}; border-left:4px solid #1f77b4; 
-                            padding:12px 16px; border-radius:8px; margin:8px 0;'>
-                    <div style='font-size:0.9rem; color:#555;'>
-                        📊 **{clean_name}** | Importance: <strong>{feat_importance:.3f}</strong><br>
-                        Nilai: <strong>{feat_value:.3f}</strong> | 
-                        Median sukses: <strong>{feat_median:.3f}</strong> | 
-                        **{percentile:+.0f}%** vs top games | {status}
+        for metric in metrics_display:
+            your_val = metric['your']
+            top_val = metric['top']
+            
+            # Status logic
+            if your_val > top_val * 1.1:
+                status, color = "🟢 Top Tier", "#d4edda"
+            elif your_val > top_val:
+                status, color = "✅ Above Average", "#c3e6cb"
+            elif your_val > top_val * 0.8:
+                status, color = "➖ Average", "#fff3cd"
+            else:
+                status, color = "⚠️ Below Average", "#f8d7da"
+            
+            st.markdown(f"""
+            <div style='background:{color}; border-left:6px solid #1f77b4; 
+                        padding:18px 22px; border-radius:15px; margin:12px 0; 
+                        box-shadow:0 4px 20px rgba(0,0,0,0.1);'>
+                <div style='display:flex; justify-content:space-between; align-items:center;'>
+                    <div>
+                        <div style='font-size:1.3rem; font-weight:bold; color:#1f77b4;'>
+                            {metric['icon']} **{metric['name']}**
+                        </div>
+                        <div style='font-size:1.1rem; margin-top:6px;'>
+                            Kamu: <strong>{your_val:,.0f}{metric['unit']}</strong> | 
+                            Top Games: <strong>{top_val:,.0f}{metric['unit']}</strong>
+                        </div>
+                    </div>
+                    <div style='font-size:2.5rem; font-weight:bold; color:#28a745;'>
+                        {status.split()[0]}
                     </div>
                 </div>
-                """, unsafe_allow_html=True)
-                
-        except Exception as e:
-            st.error(f"Feature analysis error: {e}")
-            st.info("Pastikan model sudah ter-load dengan benar")
+            </div>
+            """, unsafe_allow_html=True)
 
-        # General advice
+        # Summary
         st.markdown("---")
         if pred == 1:
-            st.success("✅ **Action Plan:** Scale marketing & community!")
+            st.success(f"🎉 **EXCELLENT POTENTIAL** ({prob:.1%}) - Ready to scale!")
         else:
-            st.warning("⚠️ **Priority:** Fix ⚠️ features above first!")
-
+            st.warning(f"⚠️ **OPTIMIZATION NEEDED** ({prob:.1%}) - Focus on ⚠️ metrics above!")
 # =====================================================
 # TAB 2: ANALYTICS 
 # =====================================================
