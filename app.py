@@ -157,7 +157,7 @@ col1, col2, col3, col4, col5, col6, col7= st.columns(7)
 with col1:
     st.markdown(f"""
     <div class="metric-card">
-        <h3>🎯 Accuracy</h3>
+        <h3>Accuracy</h3>
         <h2>{metrics['accuracy']:.1%}</h2>
     </div>
     """, unsafe_allow_html=True)
@@ -167,7 +167,7 @@ with col1:
 with col2:
     st.markdown(f"""
     <div class="metric-card">
-        <h3>🎯 F1 Score</h3>
+        <h3>F1 Score</h3>
         <h2>{metrics['f1_score']:.3f}</h2>
     </div>
     """, unsafe_allow_html=True)
@@ -175,7 +175,7 @@ with col2:
 with col3:
     st.markdown(f"""
     <div class="metric-card">
-        <h3>🎯 Precision</h3>
+        <h3>Precision</h3>
         <h2>{metrics['precision']:.3f}</h2>
     </div>
     """, unsafe_allow_html=True)
@@ -183,7 +183,7 @@ with col3:
 with col4:
     st.markdown(f"""
     <div class="metric-card">
-        <h3>🎯 Recall</h3>
+        <h3>Recall</h3>
         <h2>{metrics['recall']:.3f}</h2>
     </div>
     """, unsafe_allow_html=True)
@@ -191,7 +191,7 @@ with col4:
 with col5:
     st.markdown(f"""
     <div class="metric-card">
-        <h3>🎯 F1 Score macro</h3>
+        <h3>F1 Score macro</h3>
         <h2>{metrics['f1_score_macro']:.3f}</h2>
     </div>
     """, unsafe_allow_html=True)
@@ -199,7 +199,7 @@ with col5:
 with col6:
     st.markdown(f"""
     <div class="metric-card">
-        <h3>🎯 Precision macro</h3>
+        <h3>Precision macro</h3>
         <h2>{metrics['precision_macro']:.3f}</h2>
     </div>
     """, unsafe_allow_html=True)
@@ -207,7 +207,7 @@ with col6:
 with col7:
     st.markdown(f"""
     <div class="metric-card">
-        <h3>🎯 Recall macro</h3>
+        <h3>Recall macro</h3>
         <h2>{metrics['recall_macro']:.3f}</h2>
     </div>
     """, unsafe_allow_html=True)
