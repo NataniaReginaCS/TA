@@ -446,10 +446,12 @@ with tab3:
     Informasi ini dapat digunakan untuk menyesuaikan konten dan fitur game agar lebih menarik bagi kelompok usia tertentu.
     </div>
     """, unsafe_allow_html=True)
-    age_df = (df["AgeRecommendation"].value_counts()
-                .head(10)
-                .reset_index()
-                .rename(columns={'count': 'Total Games'}))
+    age_df = pd.DataFrame({
+        'AgeRecommendation': df['AgeRecommendation'],
+        'Predicted_Success': y_pred  # Model prediction!
+    }).groupby('AgeRecommendation')['Predicted_Success'].agg(['count', 'mean']).round(3)
+    age_df.columns = ['Total Games', 'Success Rate']
+    age_df = age_df.sort_values('Success Rate', ascending=False).head(10).reset_index()
     st.dataframe(age_df.style.background_gradient(cmap='magma'), 
                 use_container_width=True, height=170)
 
@@ -457,14 +459,16 @@ with tab3:
     st.subheader("🎨 **Top 10 Genres**")
     st.markdown("""
     <div style='font-size:1.1rem;'>
-    <b>Top Genre</b> menunjukkan genre game Roblox yang paling sering muncul dalam dataset.<br>
+    <b>Top Genre</b> menunjukkan genre game Roblox yang paling populer.<br>
     Dengan melihat genre teratas, Anda dapat memahami tren kategori game yang paling diminati dan merencanakan pengembangan konten yang sesuai.
     </div>
     """, unsafe_allow_html=True) 
-    genre_df = (df["Genre"].value_counts()
-                .head(10)
-                .reset_index()
-                .rename(columns={'count': 'Total Games'}))
+    genre_df = pd.DataFrame({
+        'Genre': df['Genre'],
+        'Predicted_Success': y_pred
+    }).groupby('Genre')['Predicted_Success'].agg(['count', 'mean']).round(3)
+    genre_df.columns = ['Total Games', 'Success Rate']
+    genre_df = genre_df.sort_values('Success Rate', ascending=False).head(10).reset_index()
     st.dataframe(genre_df.style.background_gradient(cmap='viridis'), 
                 use_container_width=True, height=300)
     
