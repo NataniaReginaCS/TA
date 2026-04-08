@@ -156,6 +156,15 @@ st.markdown("### 📊 **Model Performance Overview**")
 def safe_metric(key, default=0.0):
     return metrics.get(key, default)
 
+def format_metric(value):
+    if value is None or pd.isna(value):
+        return "N/A"
+    if isinstance(value, float):
+        if value > 0.9:
+            return f"{value:.1%}"
+        return f"{value:.3f}"
+    return str(value)
+
 icons = ['🎯', '✅', '📊', '🔍', '🎯', '📈', '🔍']
 titles = ['F1 Score', 'Accuracy', 'Precision', 'Recall', 'F1 Macro', 'Precision Macro', 'Recall Macro']
 keys = ['f1_score', 'accuracy', 'precision', 'recall', 'f1_score_macro', 'precision_macro', 'recall_macro']
@@ -168,7 +177,7 @@ for i, (icon, title, key) in enumerate(zip(icons, titles, keys)):
         st.markdown(f"""
         <div class="metric-card">
             <h3>{icon} {title}</h3>
-            <h2>{value:.3f if isinstance(value, float) else f'{value:.1%}'}</h2>
+            <h2>{format_metric(metrics.get('key_name'))}</h2>
         </div>
         """, unsafe_allow_html=True)
 
