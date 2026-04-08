@@ -435,6 +435,7 @@ with tab3:
     col1, col2, col3 = st.columns(3)
     with col1: st.metric("📊 Total Samples", f"{len(df):,}")
     with col2: st.metric("🔧 Features", df.shape[1])
+    with col3: st.metric("🗂️ Dataset", "[Roblox Games](https://www.kaggle.com/datasets/jansenccruz/roblox-dataset)")
     
     st.markdown("---")
     
