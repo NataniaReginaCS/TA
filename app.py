@@ -250,10 +250,10 @@ with tab1:
     if submitted:
         with st.spinner("🔬 Analyzing game potential..."):
             # Feature engineering 
-            favorite_rate = np.log1p(favorites / max(visits, 1))
-            engagement_rate = np.log1p((likes + dislikes) / max(visits, 1))
+            favorite_rate = favorites / max(visits, 1)
+            engagement_rate = (likes + dislikes) / max(visits, 1)
             like_ratio = likes / max(likes + dislikes, 1)
-            update_gap_days = np.log1p(update_gap)
+            update_gap_days = update_gap
 
             input_df = pd.DataFrame({
                 "game_age": [game_age], "update_gap_days": [update_gap_days],
