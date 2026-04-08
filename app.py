@@ -318,29 +318,57 @@ with tab1:
 
         st.markdown("<div style='margin-top:2rem;'></div>", unsafe_allow_html=True)
 
-        success_df = df.loc[X_test[y_pred == 1].index]
+        st.markdown("<div style='margin-top:2rem;'></div>", unsafe_allow_html=True)
+        st.markdown("### 🚨 **Fitur yang Perlu Dioptimasi**")
 
-        raw_benchmarks = {
-            'game_age': f"{success_df['game_age'].median():.0f} days",
-            'update_gap_days': f"{success_df['update_gap_days'].median():.0f} days", 
-            'like_ratio': f"{(success_df['like_ratio'].median()*100):.0f}%",
-            'favorite_rate': f"{(success_df['favorite_rate'].median()*100):.0f}%",
-            'engagement_rate': f"{(success_df['engagement_rate'].median()*100):.0f}%"
-        }
+        # Model feature importance ranking
+        rf_model = final_model.named_steps['model']
+        feature_names = final_model.named_steps['preprocessor'].get_feature_names_out()
+        importances = rf_model.feature_importances_
 
-        # Display
-        st.markdown("### 💡 **Your Game vs Top Performers**")
+        # Top 3 LOWEST performing features
+        lowest_idx = np.argsort(importances)[-3:][::-1]  # Highest impact first
+        top3_low = []
 
-        col1, col2 = st.columns(2)
-        with col1:
-            st.metric("📅 Game Age", f"{game_age} days", f"{success_df['game_age'].median():.0f} days")
-            st.metric("🔄 Update Gap", f"{update_gap} days", f"{success_df['update_gap_days'].median():.0f} days")
+        for i in lowest_idx:
+            feat_name = feature_names[i]
+            clean_name = feat_name.replace('num__', '').replace('cat__', '').replace('_', ' ').title()
+            
+            # Simple advice based on feature
+            advice = {
+                'like ratio': 'Perbanyak likes, kurangi dislikes (improve quality)',
+                'update gap days': 'Update lebih sering (7-14 hari)',
+                'game age': 'Promosi lebih agresif (bangun traction)',
+                'favorite rate': 'Tambah unique features (make shareable)',
+                'engagement rate': 'Event/quest untuk boost interaction',
+            }.get(feat_name.lower(), 'Optimasi feature ini')
+            
+            top3_low.append({
+                'name': clean_name,
+                'importance': importances[i],
+                'advice': advice
+            })
 
-        with col2:
-            st.metric("👍 Like Ratio", f"{likes/(likes+dislikes+1)*100:.0f}%", f"{success_df['like_ratio'].median()*100:.0f}%")
-            st.metric("❤️ Favorite Rate", f"{favorites/(visits+1)*100:.0f}%", f"{success_df['favorite_rate'].median()*100:.0f}%")
-            st.metric("👥 Engagement", f"{(likes+dislikes)/(visits+1)*100:.0f}%", f"{success_df['engagement_rate'].median()*100:.0f}%")
-# =====================================================
+        # Display ONLY needs improvement
+        for item in top3_low:
+            st.markdown(f"""
+            <div style='background:#fff3cd; border-left:6px solid #ffc107; 
+                        padding:20px; border-radius:12px; margin:15px 0;'>
+                <div style='font-size:1.4rem; font-weight:bold; color:#856404;'>
+                    #{top3_low.index(item)+1} {item['name']}
+                </div>
+                <div style='font-size:1.1rem; color:#665a00; margin-top:10px;'>
+                    💡 **{item['advice']}**
+                </div>
+                <div style='font-size:0.9rem; color:#aa8800; margin-top:8px;'>
+                    Impact: {item['importance']:.0%}
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        if not top3_low:
+            st.success("✅ Semua fitur sudah optimal!")
+    # =====================================================
 # TAB 2: ANALYTICS 
 # =====================================================
 with tab2:
