@@ -452,8 +452,7 @@ with tab3:
     }).groupby('AgeRecommendation')['Predicted_Success'].agg(['count', 'mean']).round(3)
     age_df.columns = ['Total Games', 'Success Rate']
     age_df = age_df.sort_values('Success Rate', ascending=False).head(10).reset_index()
-    st.dataframe(age_df.style.background_gradient(cmap='magma'), 
-                use_container_width=True, height=170)
+    st.dataframe(use_container_width=True, height=170)
 
     # Top Genres 
     st.subheader("🎨 **Top 10 Genres**")
