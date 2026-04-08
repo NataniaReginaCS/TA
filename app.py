@@ -131,6 +131,22 @@ def load_model_and_artifacts():
         st.error(f"🚨 **Model loading failed:** {str(e)}")
         st.stop()
 
+def get_robust_benchmarks(df, y_pred):
+    success_games = df[y_pred == 1].copy()
+    
+    return {
+        'game_age': success_games['game_age'].median(),
+        'update_gap_days': success_games['update_gap_days'].median(),
+        'visits_median': success_games['visits'].median(),
+        'favorites_median': success_games['favorites'].median(),
+        
+        # Rates (tidak skewed)
+        'favorite_rate': (success_games['favorites']/success_games['visits'].replace(0,1)).median(),
+        'engagement_rate': ((success_games['likes']+success_games['dislikes'])/success_games['visits'].replace(0,1)).median(),
+        'like_ratio': success_games['likes'].sum() / (success_games['likes'] + success_games['dislikes']).sum(),
+    }
+
+
 final_model, df, X_test, y_test, y_pred, y_prob, metrics, df_imp = load_model_and_artifacts()
 baseline_prob = float(np.mean(y_test))
 
@@ -302,73 +318,67 @@ with tab1:
 
         st.markdown("<div style='margin-top:2rem;'></div>", unsafe_allow_html=True)
 
-        st.markdown("### 💡 **Rekomendasi Peningkatan**")
-        st.markdown("Berikut fitur-fitur yang paling berpengaruh terhadap prediksi popularitas game kamu:")
-        
-        if hasattr(final_model.named_steps['model'], 'feature_importances_'):
+        st.markdown("### 💡 **Key Feature Analysis**")
+
+        try:
             rf_model = final_model.named_steps['model']
             preprocessor = final_model.named_steps['preprocessor']
-            
-            # Feature names dari preprocessor
+
             feature_names = preprocessor.get_feature_names_out()
-            
-            # Top 5 features
-            top_indices = np.argsort(rf_model.feature_importances_)[-5:][::-1]
-            top_features = feature_names[top_indices]
-            top_importance = rf_model.feature_importances_[top_indices]
-            
-            # Transform input untuk cek nilai actual
+            importances = rf_model.feature_importances_
+
+            top_idx = np.argsort(importances)[-5:][::-1]
+            top_features = feature_names[top_idx]
+            top_importance = importances[top_idx]
+
             input_transformed = preprocessor.transform(input_df)
-            
-            shown = 0
-            for i, (feat_name, importance) in enumerate(zip(top_features, top_importance)):
-                # Simple contribution estimate
-                feat_value = input_transformed[0, top_indices[i]]
-                simple_contribution = feat_value * importance
+
+            success_mask = y_pred == 1
+            success_features = preprocessor.transform(df.loc[X_test[success_mask].index])
+            feature_medians = np.median(success_features, axis=0)
+
+            for j in range(5):
+                feat_idx = top_idx[j]
+                feat_name = feature_names[feat_idx]
+                feat_value = input_transformed[0, feat_idx]
+                feat_importance = importances[feat_idx]
+                feat_median = feature_medians[feat_idx]
+
+                percentile = ((feat_value - feat_median) / feat_median * 100) if feat_median > 0 else 0
                 
-                # Status berdasarkan contribution
-                if simple_contribution > 0.001:
-                    status_icon, status_color, status_text = "✅", "#d4edda", "Sangat positif"
-                elif simple_contribution >= -0.001:
-                    status_icon, status_color, status_text = "➖", "#fff3cd", "Netral" 
+                if percentile > 20:
+                    status, color = "🏆 Top Tier", "#d4edda"
+                elif percentile > 0:
+                    status, color = "✅ Good", "#c3e6cb"
+                elif percentile > -20:
+                    status, color = "➖ Average", "#fff3cd"
                 else:
-                    status_icon, status_color, status_text = "⚠️", "#f8d7da", "Perlu optimasi"
+                    status, color = "⚠️ Improve", "#f8d7da"
                 
-                # Clean feature name
-                clean_feat = feat_name.replace('num__', '').replace('cat__', '').replace('_', ' ').title()
+                clean_name = feat_name.replace('num__', '').replace('cat__', '').replace('_', ' ').title()
                 
                 st.markdown(f"""
-                <div style='background:{status_color}; border-left:4px solid #1f77b4; 
-                            padding:12px 16px; border-radius:8px; margin-bottom:8px;'>
-                    <div style='font-size:0.85rem; color:#666; margin-bottom:4px;'>
-                        Importance: <strong>{importance:.3f}</strong> | 
-                        {status_icon} {status_text} | 
-                        Nilai: {feat_value:.3f}
-                    </div>
-                    <div style='font-size:1.05rem; font-weight:500;'>
-                        🔧 **{clean_feat}**: Optimalkan untuk tingkatkan peluang sukses!
+                <div style='background:{color}; border-left:4px solid #1f77b4; 
+                            padding:12px 16px; border-radius:8px; margin:8px 0;'>
+                    <div style='font-size:0.9rem; color:#555;'>
+                        📊 **{clean_name}** | Importance: <strong>{feat_importance:.3f}</strong><br>
+                        Nilai: <strong>{feat_value:.3f}</strong> | 
+                        Median sukses: <strong>{feat_median:.3f}</strong> | 
+                        **{percentile:+.0f}%** vs top games | {status}
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
-                shown += 1
-            
-            if shown == 0:
-                st.success("✅ Semua fitur dalam kondisi optimal!")
+                
+        except Exception as e:
+            st.error(f"Feature analysis error: {e}")
+            st.info("Pastikan model sudah ter-load dengan benar")
 
-        else:
-            st.info("📊 Feature importance akan tersedia setelah model siap")
-
-        # Saran tambahan berdasarkan hasil prediksi
+        # General advice
         st.markdown("---")
         if pred == 1:
-            st.success("🚀 **Game kamu sudah berpotensi populer!** Pertahankan kualitas update dan terus tingkatkan engagement pemain.")
+            st.success("✅ **Action Plan:** Scale marketing & community!")
         else:
-            st.warning("💡 **Tips untuk meningkatkan popularitas:**\n\n"
-                    "1. Rutin update game minimal 1–2 minggu sekali\n"
-                    "2. Aktif di komunitas Roblox dan media sosial\n"
-                    "3. Minta feedback pemain dan perbaiki gameplay\n"
-                    "4. Tambahkan event atau konten musiman")
-
+            st.warning("⚠️ **Priority:** Fix ⚠️ features above first!")
 
 # =====================================================
 # TAB 2: ANALYTICS 
