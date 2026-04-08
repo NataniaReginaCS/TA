@@ -446,14 +446,21 @@ with tab3:
     Informasi ini dapat digunakan untuk menyesuaikan konten dan fitur game agar lebih menarik bagi kelompok usia tertentu.
     </div>
     """, unsafe_allow_html=True)
-    age_df = pd.DataFrame({
-        'AgeRecommendation': df.loc[X_test.index, 'AgeRecommendation'], 
-        'Predicted_Success': y_pred
-    }).groupby('AgeRecommendation')['Predicted_Success'].agg(['count', 'mean']).round(3)
-    age_df.columns = ['Total Games', 'Success Rate']
-    age_df = age_df.sort_values('Success Rate', ascending=False).head(10).reset_index()
-    st.dataframe(use_container_width=True, height=170)
 
+    try:
+        age_df = pd.crosstab(df.loc[X_test.index, 'AgeRecommendation'], y_pred, 
+                            normalize='index').round(3).reset_index()
+        age_df.columns = ['AgeRecommendation', 'Not Success', 'Success', 'Success Rate']
+        age_df['Total Games'] = (age_df['Not Success'] + age_df['Success']).round(0)
+        age_df = age_df[['AgeRecommendation', 'Total Games', 'Success Rate']].sort_values('Success Rate', ascending=False).head(10)
+        
+        st.dataframe(age_df.style.format({'Success Rate': '{:.1%}', 'Total Games': '{:.0f}'})
+                    .background_gradient(subset=['Success Rate'], cmap='plasma'), 
+                    use_container_width=True, height=200)
+                
+    except Exception as e:
+        st.warning(f"📊 Age insights temporarily unavailable: {e}")
+        st.info("Model test set alignment needed")
     # Top Genres 
     st.subheader("🎨 **Top 10 Genres**")
     st.markdown("""
