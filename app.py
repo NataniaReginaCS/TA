@@ -304,75 +304,59 @@ with tab1:
 
         st.markdown("### 💡 **Rekomendasi Peningkatan**")
         st.markdown("Berikut fitur-fitur yang paling berpengaruh terhadap prediksi popularitas game kamu:")
-
-        # Ambil feature importance langsung dari RF model
-        preprocessor_step = final_model.named_steps['preprocessor']
-        rf_model = final_model.named_steps['model']
-
-        all_feature_names = preprocessor_step.get_feature_names_out()
-        importances = rf_model.feature_importances_
-
-        # Buat DataFrame feature importance
-        fi_df = pd.DataFrame({
-            'feature': all_feature_names,
-            'importance': importances
-        }).sort_values('importance', ascending=False)
-
-        transformed_input = preprocessor_step.transform(input_df)
-        transformed_input_series = pd.Series(
-            transformed_input[0], index=all_feature_names
-        )
-
-        actionable_features = {
-            "num__update_gap_days": "🔄 Update Gap Days: Perpendek jarak antar update agar pemain tetap tertarik dan kembali bermain.",
-            "num__like_ratio": "👍 Like Ratio: Perbaiki kualitas gameplay, visual, dan cerita agar rasio like lebih tinggi dari dislike.",
-            "num__favorite_rate": "❤️ Favorite Rate: Buat fitur unik dan konten menarik supaya lebih banyak pemain memfavoritkan game.",
-            "num__engagement_rate": "💬 Engagement Rate: Dorong interaksi pemain melalui event, daily quest, atau fitur komunitas.",
-            "num__game_age": "📅 Game Age: Pertahankan konsistensi update dan promosi agar game tetap relevan seiring waktu.",
-            "cat__Genre_Simulation": "🏗️ Genre Simulation: Tingkatkan realisme dan tambahkan variasi gameplay yang lebih kaya.",
-            "cat__Genre_Survival": "🗡️ Genre Survival: Tambahkan tantangan baru, item, dan mekanisme bertahan hidup yang lebih beragam.",
-            "cat__Genre_Action": "⚔️ Genre Action: Fokus pada gameplay responsif, kontrol yang mulus, dan mode kompetitif.",
-            "cat__Genre_Adventure": "🗺️ Genre Adventure: Tambahkan area baru, cerita menarik, dan misi yang beragam untuk dieksplorasi.",
-            "cat__Genre_RPG": "🧙 Genre RPG: Kembangkan sistem karakter, storyline, dan elemen progression yang lebih dalam.",
-            "cat__Genre_Obby & Platformer": "🏃 Genre Obby/Platformer: Desain level yang kreatif, menantang, dan bervariasi.",
-            "cat__Genre_Party & Casual": "🎉 Genre Party/Casual: Buat game mudah dimainkan bersama teman dan tambahkan mode multiplayer.",
-            "cat__Genre_Puzzle": "🧩 Genre Puzzle: Tambahkan teka-teki baru yang inovatif dan sistem hints yang baik.",
-            "cat__Genre_Shooter": "🔫 Genre Shooter: Seimbangkan senjata, tambahkan mode kompetitif, dan perbaiki sistem matchmaking.",
-            "cat__Genre_Roleplay & Avatar Sim": "👗 Genre Roleplay: Tambahkan opsi kustomisasi yang lebih banyak dan fitur sosial yang menarik.",
-            "cat__AgeRecommendation_All Ages": "👶 All Ages: Pastikan konten aman, ramah, dan menarik untuk semua kelompok usia.",
-            "cat__AgeRecommendation_Ages 9+": "🧒 Ages 9+: Sesuaikan tingkat kesulitan dan konten agar cocok untuk anak usia 9 tahun ke atas.",
-            "cat__AgeRecommendation_Ages 13+": "🧑 Ages 13+: Tambahkan fitur yang lebih kompleks dan menarik untuk remaja usia 13 tahun ke atas.",
-        }
-        top5_features = fi_df.head(5)
-
-        shown = 0
-        for _, row in top5_features.iterrows():
-            feat = row['feature']
-            importance = row['importance']
-            recommendation = actionable_features.get(
-                feat,
-                f"Optimalkan aspek **{feat.replace('num__','').replace('cat__','').replace('_',' ').title()}** untuk meningkatkan performa game."
-            )
-
-            feature_val = transformed_input_series.get(feat, 0)
-            if feature_val >= 0:
-                status_icon = "✅"
-                status_text = "Sudah cukup baik"
-            else:
-                status_icon = "⚠️"
-                status_text = "Perlu ditingkatkan"
-            st.markdown(f"""
-            <div style='background:#f8f9fa; border-left:4px solid #1f77b4; 
-                        padding:12px 16px; border-radius:8px; margin-bottom:10px;'>
-                <div style='font-size:0.85rem; color:#888; margin-bottom:4px;'>
-                    Importance: {importance:.4f} &nbsp;|&nbsp; {status_icon} {status_text}
+        
+        if hasattr(final_model.named_steps['model'], 'feature_importances_'):
+            rf_model = final_model.named_steps['model']
+            preprocessor = final_model.named_steps['preprocessor']
+            
+            # Feature names dari preprocessor
+            feature_names = preprocessor.get_feature_names_out()
+            
+            # Top 5 features
+            top_indices = np.argsort(rf_model.feature_importances_)[-5:][::-1]
+            top_features = feature_names[top_indices]
+            top_importance = rf_model.feature_importances_[top_indices]
+            
+            # Transform input untuk cek nilai actual
+            input_transformed = preprocessor.transform(input_df)
+            
+            shown = 0
+            for i, (feat_name, importance) in enumerate(zip(top_features, top_importance)):
+                # Simple contribution estimate
+                feat_value = input_transformed[0, top_indices[i]]
+                simple_contribution = feat_value * importance
+                
+                # Status berdasarkan contribution
+                if simple_contribution > 0.001:
+                    status_icon, status_color, status_text = "✅", "#d4edda", "Sangat positif"
+                elif simple_contribution >= -0.001:
+                    status_icon, status_color, status_text = "➖", "#fff3cd", "Netral" 
+                else:
+                    status_icon, status_color, status_text = "⚠️", "#f8d7da", "Perlu optimasi"
+                
+                # Clean feature name
+                clean_feat = feat_name.replace('num__', '').replace('cat__', '').replace('_', ' ').title()
+                
+                st.markdown(f"""
+                <div style='background:{status_color}; border-left:4px solid #1f77b4; 
+                            padding:12px 16px; border-radius:8px; margin-bottom:8px;'>
+                    <div style='font-size:0.85rem; color:#666; margin-bottom:4px;'>
+                        Importance: <strong>{importance:.3f}</strong> | 
+                        {status_icon} {status_text} | 
+                        Nilai: {feat_value:.3f}
+                    </div>
+                    <div style='font-size:1.05rem; font-weight:500;'>
+                        🔧 **{clean_feat}**: Optimalkan untuk tingkatkan peluang sukses!
+                    </div>
                 </div>
-                <div style='font-size:1rem;'>{recommendation}</div>
-            </div>
-            """, unsafe_allow_html=True)
-            shown += 1
-        if shown == 0:
-            st.info("Semua fitur utama sudah berkontribusi positif. Pertahankan kualitas game!")
+                """, unsafe_allow_html=True)
+                shown += 1
+            
+            if shown == 0:
+                st.success("✅ Semua fitur dalam kondisi optimal!")
+
+        else:
+            st.info("📊 Feature importance akan tersedia setelah model siap")
 
         # Saran tambahan berdasarkan hasil prediksi
         st.markdown("---")
