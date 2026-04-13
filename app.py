@@ -70,13 +70,13 @@ def load_artifacts():
 @st.cache_data
 def build_benchmark(_df):
     # Filter populer games: top 25% berdasarkan active (log-transformed untuk handling skew)
-    pop = df[df['active'] >= np.log1p(df['active']).quantile(0.75)].copy()
+    pop = df[df['Active'] >= np.log1p(df['Active']).quantile(0.75)].copy()
     if 'like_ratio' not in pop.columns:
-        pop['like_ratio']      = pop['likes'] / (pop['likes'] + pop['dislikes'] + 1)
+        pop['like_ratio']      = pop['Likes'] / (pop['Likes'] + pop['Dislikes'] + 1)
     if 'favorite_rate' not in pop.columns:
-        pop['favorite_rate']   = pop['favorites'] / pop['visits'].replace(0, 1)
+        pop['favorite_rate']   = pop['Favorites'] / pop['Visits'].replace(0, 1)
     if 'engagement_rate' not in pop.columns:
-        pop['engagement_rate'] = (pop['likes'] + pop['dislikes']) / pop['visits'].replace(0, 1)
+        pop['engagement_rate'] = (pop['Likes'] + pop['Dislikes']) / pop['Visits'].replace(0, 1)
 
     def iqr(s):
         return {'median': s.median(), 'q1': s.quantile(0.25), 'q3': s.quantile(0.75)}
