@@ -99,7 +99,8 @@ def load_model_and_artifacts():
 # =====================================================
 @st.cache_data
 def get_contextual_benchmark(df, genre, age):
-
+    threshold = df['Active'].quantile(0.75)
+    popular = df[df['Active'] >= threshold]
 
     subset = popular[
         (popular['Genre'] == genre) &
