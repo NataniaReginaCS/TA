@@ -99,7 +99,7 @@ def load_model_and_artifacts():
 # =====================================================
 @st.cache_data
 def get_contextual_benchmark(df, genre, age):
-    popular = df[df['target'] == 1].copy()
+
 
     subset = popular[
         (popular['Genre'] == genre) &
@@ -245,7 +245,8 @@ tab1, tab2, tab3 = st.tabs(["🎮 Game Predictor", "📊 Model Analytics", "📈
 with tab1:
     st.markdown("---")
     st.markdown("#### 🔮 **Input Game Data**")
-
+    st.markdown("#### 📋 **Dataset Preview**")
+    st.dataframe(df.head(10), use_container_width=True, height=300)
     with st.form("predict_form", clear_on_submit=True):
         c1, c2 = st.columns(2)
         with c1:
