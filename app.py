@@ -134,8 +134,9 @@ def generate_recommendations(user_vals: dict, benchmark: dict) -> list:
             'icon'  : '👍',
             'title' : 'Like Ratio Perlu Ditingkatkan',
             'detail': (
-                f"Like ratio kamu **{user_lr:.1%}**, sementara game populer rata-rata **{bench_lr:.1%}**. "
-                f"Artinya ada selisih sekitar **{pct_gap:.0f}%** dari standar game populer. "
+                f"Like ratio kamu {user_lr:.1%}, sementara game populer dengan genre {user_vals['Genre']} "
+                f"dan age recommendation {user_vals['AgeRecommendation']} rata-rata {bench_lr:.1%}. "
+                f"Artinya ada selisih sekitar {pct_gap:.0f}% dari standar game populer. "
                 "Coba minta feedback dari pemain dan perbaiki aspek gameplay yang sering dikritik, "
                 "seperti kontrol, tingkat kesulitan, atau visual."
             ),
@@ -151,10 +152,10 @@ def generate_recommendations(user_vals: dict, benchmark: dict) -> list:
             'icon'  : '🔄',
             'title' : 'Frekuensi Update Terlalu Jarang',
             'detail': (
-                f"Kamu terakhir update **{user_ug:.0f} hari** yang lalu, sedangkan game populer "
-                f"biasanya update setiap **{bench_ug:.0f} hari**. "
+                f"Kamu terakhir update {user_ug:.0f} hari yang lalu, sedangkan game populer dengan genre {user_vals['Genre']} "
+                f"dan age recommendation {user_vals['AgeRecommendation']} biasanya update setiap {bench_ug:.0f} hari. "
                 "Pemain cenderung meninggalkan game yang jarang diperbarui. "
-                "Usahakan rilis update kecil (bug fix, konten baru) minimal 1–2 kali per bulan."
+                "Usahakan rilis update kecil (bug fix, konten baru) secara rutin untuk menjaga minat pemain dan meningkatkan retensi."
             ),
             'priority': (user_ug - bench_ug)
         })
@@ -168,8 +169,9 @@ def generate_recommendations(user_vals: dict, benchmark: dict) -> list:
             'icon'  : '❤️',
             'title' : 'Tingkat Favorit Masih Rendah',
             'detail': (
-                f"Favorite rate kamu **{user_fr:.3f}** (favorit per kunjungan), "
-                f"sedangkan game populer rata-rata **{bench_fr:.3f}** — selisih **{pct_gap:.0f}%**. "
+                f"Favorite rate kamu {user_fr:.3f} (favorit per kunjungan), "
+                f"sedangkan game populer dengan genre {user_vals['Genre']} dan age recommendation {user_vals['AgeRecommendation']} "
+                f"rata-rata {bench_fr:.3f} — selisih {pct_gap:.0f}%. "
                 "Tambahkan fitur yang mendorong pemain menyimpan game ke favorit, "
                 "seperti konten eksklusif, sistem reward, atau event berkala."
             ),
@@ -185,8 +187,9 @@ def generate_recommendations(user_vals: dict, benchmark: dict) -> list:
             'icon'  : '💬',
             'title' : 'Engagement Pemain Masih Rendah',
             'detail': (
-                f"Engagement rate kamu **{user_er:.4f}** (like+dislike per kunjungan), "
-                f"sedangkan game populer rata-rata **{bench_er:.4f}** — selisih **{pct_gap:.0f}%**. "
+                f"Engagement rate kamu {user_er:.4f} (like+dislike per kunjungan), "
+                f"sedangkan game populer dengan genre {user_vals['Genre']} dan age recommendation {user_vals['AgeRecommendation']} "
+                f"rata-rata {bench_er:.4f} — selisih {pct_gap:.0f}%. "
                 "Dorong interaksi pemain dengan menambahkan tombol rating yang menonjol, "
                 "event komunitas, tantangan mingguan, atau fitur berbagi pencapaian."
             ),
