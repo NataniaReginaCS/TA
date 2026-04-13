@@ -436,7 +436,7 @@ with tab3:
     col1, col2, col3 = st.columns(3)
     with col1: st.metric("📊 Total Samples", f"{len(df):,}")
     with col2: st.metric("🔧 Features",      df.shape[1])
-    with col3: st.metric("🗂️ Dataset Source", "Kaggle Roblox Dataset")
+    with col3: st.metric("🗂️ Dataset Source", "[Kaggle Roblox Dataset](https://www.kaggle.com/datasets/jansenccruz/roblox-dataset)")
     st.markdown("---")
 
     # Age Recommendations
@@ -535,10 +535,3 @@ with tab3:
         top_imp_disp = top_imp.copy()
         top_imp_disp['Importance'] = top_imp_disp['Importance'].round(4)
         st.dataframe(top_imp_disp.style.background_gradient(cmap='plasma'), use_container_width=True)
-
-st.markdown("---")
-st.markdown(
-    "<div style='text-align:center; color:#aaa; font-size:0.85rem;'>"
-    "Roblox Game Success Classifier · Dibangun dengan Random Forest & Streamlit"
-    "</div>", unsafe_allow_html=True
-)
