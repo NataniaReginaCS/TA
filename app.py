@@ -69,7 +69,8 @@ def load_artifacts():
 # ─────────────────────────────────────────────────────────────────
 @st.cache_data
 def build_benchmark(_df):
-    pop = _df[_df['target'] == 1].copy()
+    # Filter populer games: top 25% berdasarkan active (log-transformed untuk handling skew)
+    pop = df[df['active'] >= np.log1p(df['active']).quantile(0.75)].copy()
     if 'like_ratio' not in pop.columns:
         pop['like_ratio']      = pop['likes'] / (pop['likes'] + pop['dislikes'] + 1)
     if 'favorite_rate' not in pop.columns:
