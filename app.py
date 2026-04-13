@@ -99,7 +99,7 @@ def load_model_and_artifacts():
 # =====================================================
 @st.cache_data
 def get_contextual_benchmark(df, genre, age):
-    popular = df[df['Target'] == 1].copy()
+    popular = df[df['target'] == 1].copy()
 
     subset = popular[
         (popular['Genre'] == genre) &
@@ -319,7 +319,7 @@ with tab1:
             'Genre'           : genre,
             'AgeRecommendation': age_rec,
         }
-        
+
         benchmark = get_contextual_benchmark(df, genre, age_rec)
         recs = generate_recommendations(user_vals, benchmark)
 
