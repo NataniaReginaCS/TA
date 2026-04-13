@@ -98,30 +98,33 @@ def load_model_and_artifacts():
 # BENCHMARK GAME POPULER
 # =====================================================
 @st.cache_data
-def get_popular_benchmarks(_df):
-    popular_indices = y_test[y_test == 1].index
-    popular = _df.loc[popular_indices].copy() if len(popular_indices) > 0 else _df[_df.index.isin([])].copy()
+def get_contextual_benchmark(df, genre, age):
+    popular = df[df['Target'] == 1].copy()
 
-    popular['_fav_rate']  = popular['Favorites'] / popular['Visits'].replace(0, 1)
-    popular['_eng_rate']  = (popular['Likes'] + popular['Dislikes']) / popular['Visits'].replace(0, 1)
-    popular['_like_ratio'] = popular['Likes'] / (popular['Likes'] + popular['Dislikes'] + 1)
-    
+    subset = popular[
+        (popular['Genre'] == genre) &
+        (popular['AgeRecommendation'] == age)
+    ]
+
+    if len(subset) < 30:
+        subset = popular
+
+    subset['_fav_rate']  = subset['Favorites'] / subset['Visits'].replace(0, 1)
+    subset['_eng_rate']  = (subset['Likes'] + subset['Dislikes']) / subset['Visits'].replace(0, 1)
+    subset['_like_ratio'] = subset['Likes'] / (subset['Likes'] + subset['Dislikes'] + 1)
+
     return {
-        'game_age'        : popular['game_age'].median(),
-        'update_gap_days' : popular['update_gap_days'].median(),   
-        'favorite_rate'   : popular['_fav_rate'].median(),
-        'engagement_rate' : popular['_eng_rate'].median(),
-        'like_ratio'      : popular['_like_ratio'].median(),
+        'game_age'        : subset['game_age'].median(),
+        'update_gap_days' : subset['update_gap_days'].median(),
+        'favorite_rate'   : subset['_fav_rate'].median(),
+        'engagement_rate' : subset['_eng_rate'].median(),
+        'like_ratio'      : subset['_like_ratio'].median(),
     }
 
 # =====================================================
 # RECOMMENDATION ENGINE
 # =====================================================
 def generate_recommendations(user_vals: dict, benchmark: dict) -> list:
-    """
-    Bandingkan nilai user dengan benchmark game populer.
-    Kembalikan list rekomendasi hanya untuk fitur yang MEMANG perlu diperbaiki.
-    """
     recs = []
 
     # ── 1. like_ratio ──────────────────────────────────────────────
@@ -196,7 +199,6 @@ def generate_recommendations(user_vals: dict, benchmark: dict) -> list:
 
 
 final_model, df, X_test, y_test, y_pred, y_prob, metrics, df_imp = load_model_and_artifacts()
-benchmark = get_popular_benchmarks(df)
 
 unique_genres = sorted(df.get("Genre", pd.Series()).dropna().unique().tolist())
 unique_ages   = sorted(df.get("AgeRecommendation", pd.Series()).dropna().unique().tolist())
@@ -314,8 +316,11 @@ with tab1:
             'favorite_rate'   : fav_rate,
             'engagement_rate' : eng_rate,
             'game_age'        : game_age,
+            'Genre'           : genre,
+            'AgeRecommendation': age_rec,
         }
-
+        
+        benchmark = get_contextual_benchmark(df, genre, age_rec)
         recs = generate_recommendations(user_vals, benchmark)
 
         if pred == 0:
@@ -354,7 +359,7 @@ with tab1:
                         <span style='color:#444; font-size:0.97rem;'>{r['detail']}</span>
                     </div>""", unsafe_allow_html=True)
 
-        # ── Benchmark info (selalu tampil sebagai referensi) ──
+        # ── Benchmark info ──
         with st.expander("📐 Lihat Benchmark Game Populer (referensi perbandingan)"):
             bcol1, bcol2, bcol3, bcol4 = st.columns(4)
             bcol1.metric("Like Ratio (median)",       f"{benchmark['like_ratio']:.1%}")
@@ -363,7 +368,7 @@ with tab1:
             bcol4.metric("Engagement Rate (median)",  f"{benchmark['engagement_rate']:.4f}")
             st.caption(
                 "Benchmark dihitung dari median game-game yang diklasifikasikan sebagai Populer "
-                "dalam dataset Kaggle Roblox (9.734 game). Semakin kecil Update Gap = semakin sering diperbarui = lebih baik."
+                "dalam dataset Kaggle Roblox (9.734 game)."
             )
 
 # ─────────────────────────────────────────────────────
