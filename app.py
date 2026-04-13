@@ -99,7 +99,14 @@ def load_model_and_artifacts():
 # =====================================================
 @st.cache_data
 def get_contextual_benchmark(df, genre, age):
-    popular = df[df['target'] == 1].copy()
+    # Handle different possible target column names
+    target_col = 'target' if 'target' in df.columns else 'Predicted_Success' if 'Predicted_Success' in df.columns else None
+    
+    if target_col is None:
+        st.error("🚨 Target column not found in dataframe")
+        return None
+    
+    popular = df[df[target_col] == 1].copy()
 
     subset = popular[
         (popular['Genre'] == genre) &
@@ -366,10 +373,7 @@ with tab1:
             bcol2.metric("Update Gap (median, hari)", f"{benchmark['update_gap_days']:.0f}")
             bcol3.metric("Favorite Rate (median)",    f"{benchmark['favorite_rate']:.4f}")
             bcol4.metric("Engagement Rate (median)",  f"{benchmark['engagement_rate']:.4f}")
-            st.caption(
-                "Benchmark dihitung dari median game-game yang diklasifikasikan sebagai Populer "
-                "dalam dataset Kaggle Roblox (9.734 game)."
-            )
+            st.caption(f"Benchmark dibandingkan dengan game populer genre {genre} untuk usia {age_rec} dalam dataset Kaggle Roblox (9.734 game).")
 
 # ─────────────────────────────────────────────────────
 # TAB 2 : MODEL ANALYTICS
