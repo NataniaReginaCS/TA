@@ -363,17 +363,6 @@ with tab1:
                     f"- **Favorite rate rendah** — tambahkan reason untuk pemain menyimpan game (exclusive rewards, seasonal content)."
                 )
                 
-                st.markdown("#### 📊 **Your Game Metrics vs Benchmark**")
-                mc1, mc2, mc3, mc4 = st.columns(4)
-                with mc1:
-                    st.metric("Like Ratio", f"{like_ratio:.1%}", delta=f"{(like_ratio - benchmark['like_ratio'])*100:.1f}%")
-                with mc2:
-                    st.metric("Engagement Rate", f"{eng_rate:.4f}", delta=f"{(eng_rate - benchmark['engagement_rate'])*1000:.2f}‰")
-                with mc3:
-                    st.metric("Favorite Rate", f"{fav_rate:.4f}", delta=f"{(fav_rate - benchmark['favorite_rate'])*1000:.2f}‰")
-                with mc4:
-                    st.metric("Update Gap (days)", f"{update_gap:.0f}", delta=f"{update_gap - benchmark['update_gap_days']:.0f}")
-
         else:
             if recs:
                 st.markdown("### ✨ **Aspek yang Masih Bisa Ditingkatkan**")
