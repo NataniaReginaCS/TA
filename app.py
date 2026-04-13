@@ -249,8 +249,6 @@ tab1, tab2, tab3 = st.tabs(["🎮 Game Predictor", "📊 Model Analytics", "📈
 with tab1:
     st.markdown("---")
     st.markdown("#### 🔮 **Input Game Data**")
-    st.markdown("#### 📋 **Dataset Preview**")
-    st.metric("📊 Total Records in Dataset", f"{len(df):,}")
     with st.form("predict_form", clear_on_submit=True):
         c1, c2 = st.columns(2)
         with c1:
