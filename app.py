@@ -95,27 +95,47 @@ def load_model_and_artifacts():
         st.stop()
 
 # =====================================================
+# HELPER FUNCTIONS
+# =====================================================
+def get_target_column(df):
+    """Detect target column name"""
+    possible_targets = ['target', 'Predicted_Success', 'success']
+    for col in possible_targets:
+        if col in df.columns:
+            return col
+    return None
+
+def safe_column_access(df, col_name, default=None):
+    """Safely access dataframe columns"""
+    if col_name in df.columns:
+        return df[col_name]
+    return pd.Series([default] * len(df))
+
+# =====================================================
 # BENCHMARK GAME POPULER
 # =====================================================
 @st.cache_data
 def get_contextual_benchmark(df, genre, age):
-    # Handle different possible target column names
-    target_col = 'target' if 'target' in df.columns else 'Predicted_Success' if 'Predicted_Success' in df.columns else None
-    
+    target_col = get_target_column(df)
     if target_col is None:
-        st.error("🚨 Target column not found in dataframe")
         return None
     
+    # Filter popular games
     popular = df[df[target_col] == 1].copy()
-
+    
+    # Filter by genre and age
     subset = popular[
         (popular['Genre'] == genre) &
         (popular['AgeRecommendation'] == age)
-    ]
-
-    subset['_fav_rate']  = subset['Favorites'] / subset['Visits'].replace(0, 1)
-    subset['_eng_rate']  = (subset['Likes'] + subset['Dislikes']) / subset['Visits'].replace(0, 1)
-    subset['_like_ratio'] = subset['Likes'] / (subset['Likes'] + subset['Dislikes'] + 1)
+    ].copy()
+    
+    if len(subset) == 0:
+        return None
+    
+    # Calculate derived metrics safely
+    subset['_fav_rate'] = safe_column_access(subset, 'Favorites', 0) / safe_column_access(subset, 'Visits', 1).replace(0, 1)
+    subset['_eng_rate'] = (safe_column_access(subset, 'Likes', 0) + safe_column_access(subset, 'Dislikes', 0)) / safe_column_access(subset, 'Visits', 1).replace(0, 1)
+    subset['_like_ratio'] = safe_column_access(subset, 'Likes', 0) / (safe_column_access(subset, 'Likes', 0) + safe_column_access(subset, 'Dislikes', 0) + 1)
 
     return {
         'game_age'        : subset['game_age'].median(),
@@ -132,86 +152,87 @@ def generate_recommendations(user_vals: dict, benchmark: dict) -> list:
     recs = []
 
     # ── 1. like_ratio ──────────────────────────────────────────────
-    user_lr  = user_vals['like_ratio']
-    bench_lr = benchmark['like_ratio']
-    if user_lr < bench_lr * 0.85:          # user lebih dari 15% di bawah benchmark
+    user_lr = user_vals.get('like_ratio', 0)
+    bench_lr = benchmark.get('like_ratio', 0.5)
+    if user_lr < bench_lr * 0.85:
         pct_gap = (bench_lr - user_lr) / bench_lr * 100
         recs.append({
-            'icon'  : '👍',
-            'title' : 'Like Ratio Perlu Ditingkatkan',
+            'icon': '👍',
+            'title': 'Like Ratio Perlu Ditingkatkan',
             'detail': (
                 f"Like ratio kamu **{user_lr:.1%}**, sementara game populer rata-rata **{bench_lr:.1%}**. "
                 f"Artinya ada selisih sekitar **{pct_gap:.0f}%** dari standar game populer. "
-                "Coba minta feedback dari pemain dan perbaiki aspek gameplay yang sering dikritik, "
-                "seperti kontrol, tingkat kesulitan, atau visual."
+                "Coba minta feedback dari pemain dan perbaiki aspek gameplay yang sering dikritik."
             ),
             'priority': (bench_lr - user_lr)
         })
 
     # ── 2. update_gap_days ─────────────────────────────────────────
-    user_ug  = user_vals['update_gap_days']
-    bench_ug = benchmark['update_gap_days']
-    
-    if user_ug > bench_ug * 1.5:           # user >50% lebih jarang update dari benchmark
+    user_ug = user_vals.get('update_gap_days', 30)
+    bench_ug = benchmark.get('update_gap_days', 30)
+    if user_ug > bench_ug * 1.5:
         recs.append({
-            'icon'  : '🔄',
-            'title' : 'Frekuensi Update Terlalu Jarang',
+            'icon': '🔄',
+            'title': 'Frekuensi Update Terlalu Jarang',
             'detail': (
                 f"Kamu terakhir update **{user_ug:.0f} hari** yang lalu, sedangkan game populer "
                 f"biasanya update setiap **{bench_ug:.0f} hari**. "
-                "Pemain cenderung meninggalkan game yang jarang diperbarui. "
-                "Usahakan rilis update kecil (bug fix, konten baru) minimal 1–2 kali per bulan."
+                "Pemain cenderung meninggalkan game yang jarang diperbarui."
             ),
             'priority': (user_ug - bench_ug)
         })
 
     # ── 3. favorite_rate ───────────────────────────────────────────
-    user_fr  = user_vals['favorite_rate']
-    bench_fr = benchmark['favorite_rate']
-    if user_fr < bench_fr * 0.75:          # user lebih dari 25% di bawah benchmark
+    user_fr = user_vals.get('favorite_rate', 0)
+    bench_fr = benchmark.get('favorite_rate', 0.05)
+    if user_fr < bench_fr * 0.75:
         pct_gap = (bench_fr - user_fr) / bench_fr * 100
         recs.append({
-            'icon'  : '❤️',
-            'title' : 'Tingkat Favorit Masih Rendah',
+            'icon': '❤️',
+            'title': 'Tingkat Favorit Masih Rendah',
             'detail': (
-                f"Favorite rate kamu **{user_fr:.3f}** (favorit per kunjungan), "
-                f"sedangkan game populer rata-rata **{bench_fr:.3f}** — selisih **{pct_gap:.0f}%**. "
-                "Tambahkan fitur yang mendorong pemain menyimpan game ke favorit, "
-                "seperti konten eksklusif, sistem reward, atau event berkala."
+                f"Favorite rate kamu **{user_fr:.3f}**, sedangkan game populer rata-rata **{bench_fr:.3f}**. "
+                "Tambahkan fitur yang mendorong pemain menyimpan game ke favorit."
             ),
             'priority': (bench_fr - user_fr) * 100
         })
 
     # ── 4. engagement_rate ─────────────────────────────────────────
-    user_er  = user_vals['engagement_rate']
-    bench_er = benchmark['engagement_rate']
+    user_er = user_vals.get('engagement_rate', 0)
+    bench_er = benchmark.get('engagement_rate', 0.1)
     if user_er < bench_er * 0.75:
         pct_gap = (bench_er - user_er) / bench_er * 100
         recs.append({
-            'icon'  : '💬',
-            'title' : 'Engagement Pemain Masih Rendah',
+            'icon': '💬',
+            'title': 'Engagement Pemain Masih Rendah',
             'detail': (
-                f"Engagement rate kamu **{user_er:.4f}** (like+dislike per kunjungan), "
-                f"sedangkan game populer rata-rata **{bench_er:.4f}** — selisih **{pct_gap:.0f}%**. "
-                "Dorong interaksi pemain dengan menambahkan tombol rating yang menonjol, "
-                "event komunitas, tantangan mingguan, atau fitur berbagi pencapaian."
+                f"Engagement rate kamu **{user_er:.4f}**, sedangkan game populer rata-rata **{bench_er:.4f}**. "
+                "Dorong interaksi pemain dengan menambahkan tombol rating yang menonjol."
             ),
             'priority': (bench_er - user_er) * 1000
         })
+    
     recs.sort(key=lambda x: x['priority'], reverse=True)
     return recs
 
-
-final_model, df, X_test, y_test, y_pred, y_prob, metrics, df_imp = load_model_and_artifacts()
-
-unique_genres = sorted(df.get("Genre", pd.Series()).dropna().unique().tolist())
-unique_ages   = sorted(df.get("AgeRecommendation", pd.Series()).dropna().unique().tolist())
+# =====================================================
+# LOAD DATA
+# =====================================================
+try:
+    final_model, df, X_test, y_test, y_pred, y_prob, metrics, df_imp = load_model_and_artifacts()
+    
+    # Get unique values safely
+    unique_genres = sorted(df['Genre'].dropna().unique().tolist()) if 'Genre' in df.columns else []
+    unique_ages = sorted(df['AgeRecommendation'].dropna().unique().tolist()) if 'AgeRecommendation' in df.columns else []
+    
+except Exception as e:
+    st.error(f"Failed to load data: {e}")
+    st.stop()
 
 # =====================================================
 # HEADER
 # =====================================================
-st.markdown('<h1 class="main-header">🚀 Roblox Game Success Classification</h1>',
-            unsafe_allow_html=True)
+st.markdown('<h1 class="main-header">🚀 Roblox Game Success Classification</h1>', unsafe_allow_html=True)
 st.markdown("""
 <div style='text-align:center; color:#666; font-size:1.2rem; margin-bottom:2rem;'>
     Klasifikasi game populer dalam platform Roblox menggunakan <strong>Random Forest</strong>
@@ -225,14 +246,15 @@ st.markdown("### 📊 **Model Performance Overview**")
 col1, col2, col3, col4, col5, col6, col7 = st.columns(7)
 
 metric_items = [
-    ("Accuracy",        f"{metrics['accuracy']:.1%}"),
-    ("F1 Score",        f"{metrics['f1_score']:.3f}"),
-    ("Precision",       f"{metrics['precision']:.3f}"),
-    ("Recall",          f"{metrics['recall']:.3f}"),
-    ("F1 Score macro",  f"{metrics.get('f1_score_macro', metrics['f1_score']):.3f}"),
-    ("Precision macro", f"{metrics.get('precision_macro', metrics['precision']):.3f}"),
-    ("Recall macro",    f"{metrics.get('recall_macro', metrics['recall']):.3f}"),
+    ("Accuracy", f"{metrics.get('accuracy', 0):.1%}"),
+    ("F1 Score", f"{metrics.get('f1_score', 0):.3f}"),
+    ("Precision", f"{metrics.get('precision', 0):.3f}"),
+    ("Recall", f"{metrics.get('recall', 0):.3f}"),
+    ("F1 Score macro", f"{metrics.get('f1_score_macro', 0):.3f}"),
+    ("Precision macro", f"{metrics.get('precision_macro', 0):.3f}"),
+    ("Recall macro", f"{metrics.get('recall_macro', 0):.3f}"),
 ]
+
 for col, (label, val) in zip([col1,col2,col3,col4,col5,col6,col7], metric_items):
     with col:
         st.markdown(f"""
@@ -253,51 +275,56 @@ with tab1:
     st.markdown("---")
     st.markdown("#### 🔮 **Input Game Data**")
 
+    if not unique_genres or not unique_ages:
+        st.warning("⚠️ Genre or Age data not available. Using defaults.")
+        unique_genres = ['All Genres']
+        unique_ages = ['All Ages']
+
     with st.form("predict_form", clear_on_submit=True):
         c1, c2 = st.columns(2)
         with c1:
-            genre   = st.selectbox("🎨 **Genre**", options=unique_genres)
+            genre = st.selectbox("🎨 **Genre**", options=unique_genres)
             age_rec = st.selectbox("👶 **Age Rating**", options=unique_ages)
         with c2:
-            game_age   = st.number_input("📅 **Game Age** (days)", min_value=0, value=300)
+            game_age = st.number_input("📅 **Game Age** (days)", min_value=0, value=300)
             update_gap = st.number_input("🔄 **Days Since Last Update**", min_value=0, value=30)
 
         c3, c4 = st.columns(2)
         with c3:
-            visits    = st.number_input("👥 **Total Visits**",  min_value=0, value=50000)
-            favorites = st.number_input("❤️ **Favorites**",     min_value=0, value=2500)
+            visits = st.number_input("👥 **Total Visits**", min_value=0, value=50000)
+            favorites = st.number_input("❤️ **Favorites**", min_value=0, value=2500)
         with c4:
-            likes    = st.number_input("👍 **Likes**",    min_value=0, value=5000)
+            likes = st.number_input("👍 **Likes**", min_value=0, value=5000)
             dislikes = st.number_input("👎 **Dislikes**", min_value=0, value=500)
 
         submitted = st.form_submit_button("🚀 **ANALYZE GAME**", use_container_width=True)
 
     if submitted:
         with st.spinner("🔬 Analyzing game potential..."):
-            fav_rate  = favorites / max(visits, 1)
-            eng_rate  = (likes + dislikes) / max(visits, 1)
+            fav_rate = favorites / max(visits, 1)
+            eng_rate = (likes + dislikes) / max(visits, 1)
             like_ratio = likes / max(likes + dislikes, 1)
 
             input_df = pd.DataFrame({
-                "game_age"        : [game_age],
-                "update_gap_days" : [update_gap],
-                "favorite_rate"   : [fav_rate],
-                "engagement_rate" : [eng_rate],
-                "like_ratio"      : [like_ratio],
-                "Genre"           : [genre],
+                "game_age": [game_age],
+                "update_gap_days": [update_gap],
+                "favorite_rate": [fav_rate],
+                "engagement_rate": [eng_rate],
+                "like_ratio": [like_ratio],
+                "Genre": [genre],
                 "AgeRecommendation": [age_rec],
             })
 
             pred = final_model.predict(input_df)[0]
             prob = final_model.predict_proba(input_df)[:, 1][0]
 
-        # ── Hasil prediksi ──
+        # Results
         if pred == 1:
             st.markdown(f"""
             <div class="success-box">
                 <h2>🎉 HIGH SUCCESS POTENTIAL!</h2>
                 <h3 style='color:#2d5a2a; font-size:2rem;'>
-                    <span class="stats-metric">Probability of success: {prob*100:.1f}%</span>
+                    <span class="stats-metric">Probability: {prob*100:.1f}%</span>
                 </h3>
                 <p>🚀 This game has viral potential on Roblox!</p>
             </div>""", unsafe_allow_html=True)
@@ -306,71 +333,57 @@ with tab1:
             <div class="error-box">
                 <h2>⚠️ Needs Optimization</h2>
                 <h3 style='color:#8b1a1a; font-size:2rem;'>
-                    <span class="stats-metric">Probability of success: {prob*100:.1f}%</span>
+                    <span class="stats-metric">Probability: {prob*100:.1f}%</span>
                 </h3>
-                <p>💡 Lihat panduan di bawah untuk meningkatkan peluang popularitas!</p>
+                <p>💡 See recommendations below!</p>
             </div>""", unsafe_allow_html=True)
 
-        st.markdown("<div style='margin-top:2rem;'></div>", unsafe_allow_html=True)
-
-        # ── Recommendations ──
+        # Recommendations
         user_vals = {
-            'like_ratio'      : like_ratio,
-            'update_gap_days' : update_gap,
-            'favorite_rate'   : fav_rate,
-            'engagement_rate' : eng_rate,
-            'game_age'        : game_age,
-            'Genre'           : genre,
-            'AgeRecommendation': age_rec,
+            'like_ratio': like_ratio,
+            'update_gap_days': update_gap,
+            'favorite_rate': fav_rate,
+            'engagement_rate': eng_rate,
         }
 
         benchmark = get_contextual_benchmark(df, genre, age_rec)
+        if benchmark is None:
+            st.warning("⚠️ No benchmark data found. Using dataset averages.")
+            benchmark = {
+                'like_ratio': 0.5,
+                'update_gap_days': 30,
+                'favorite_rate': 0.05,
+                'engagement_rate': 0.1,
+            }
+        
         recs = generate_recommendations(user_vals, benchmark)
 
-        if pred == 0:
-            st.markdown("### 🛠️ **Panduan Peningkatan**")
-            st.caption(
-                f"Perbandingan dilakukan terhadap median game populer di dataset. "
-                f"Hanya aspek yang benar-benar di bawah standar yang ditampilkan."
-            )
+        if pred == 0 and recs:
+            st.markdown("### 🛠️ **Improvement Guide**")
+            for r in recs:
+                st.markdown(f"""
+                <div style='background:#fff8f0; border-left:5px solid #ff7f0e;
+                            padding:14px 18px; border-radius:10px; margin-bottom:12px;'>
+                    <b style='font-size:1.05rem;'>{r['icon']} {r['title']}</b><br>
+                    <span style='color:#444; font-size:0.97rem;'>{r['detail']}</span>
+                </div>""", unsafe_allow_html=True)
+        elif pred == 1 and recs:
+            st.markdown("### ✨ **Optimization Opportunities**")
+            for r in recs:
+                st.markdown(f"""
+                <div style='background:#f0f8ff; border-left:5px solid #1f77b4;
+                            padding:14px 18px; border-radius:10px; margin-bottom:12px;'>
+                    <b style='font-size:1.05rem;'>{r['icon']} {r['title']}</b><br>
+                    <span style='color:#444; font-size:0.97rem;'>{r['detail']}</span>
+                </div>""", unsafe_allow_html=True)
 
-            if recs:
-                for r in recs:
-                    st.markdown(f"""
-                    <div style='background:#fff8f0; border-left:5px solid #ff7f0e;
-                                padding:14px 18px; border-radius:10px; margin-bottom:12px;'>
-                        <b style='font-size:1.05rem;'>{r['icon']} {r['title']}</b><br>
-                        <span style='color:#444; font-size:0.97rem;'>{r['detail']}</span>
-                    </div>""", unsafe_allow_html=True)
-            else:
-                st.info(
-                    "📌 Menariknya, semua fitur utama kamu sudah setara atau lebih baik "
-                    "dari rata-rata game populer. Kemungkinan penyebab lain:\n\n"
-                    "- **Game terlalu baru** — butuh waktu agar terkumpul data interaksi yang cukup.\n"
-                    "- **Jumlah kunjungan masih sangat rendah** — fokus dulu pada promosi dan visibilitas.\n"
-                    "- **Genre atau rekomendasi usia** yang niche — pertimbangkan target audiens yang lebih luas."
-                )
-
-        else:
-            if recs:
-                st.markdown("### ✨ **Aspek yang Masih Bisa Ditingkatkan**")
-                st.caption("Game kamu sudah populer, tapi beberapa aspek ini masih bisa dioptimalkan lebih lanjut.")
-                for r in recs:
-                    st.markdown(f"""
-                    <div style='background:#f0f8ff; border-left:5px solid #1f77b4;
-                                padding:14px 18px; border-radius:10px; margin-bottom:12px;'>
-                        <b style='font-size:1.05rem;'>{r['icon']} {r['title']}</b><br>
-                        <span style='color:#444; font-size:0.97rem;'>{r['detail']}</span>
-                    </div>""", unsafe_allow_html=True)
-
-        # ── Benchmark info ──
-        with st.expander("📐 Lihat Benchmark Game Populer (referensi perbandingan)"):
+        # Benchmark info
+        with st.expander("📐 Benchmark Reference"):
             bcol1, bcol2, bcol3, bcol4 = st.columns(4)
-            bcol1.metric("Like Ratio (median)",       f"{benchmark['like_ratio']:.1%}")
-            bcol2.metric("Update Gap (median, hari)", f"{benchmark['update_gap_days']:.0f}")
-            bcol3.metric("Favorite Rate (median)",    f"{benchmark['favorite_rate']:.4f}")
-            bcol4.metric("Engagement Rate (median)",  f"{benchmark['engagement_rate']:.4f}")
-            st.caption(f"Benchmark dibandingkan dengan game populer genre {genre} untuk usia {age_rec} dalam dataset Kaggle Roblox (9.734 game).")
+            bcol1.metric("Like Ratio", f"{benchmark['like_ratio']:.1%}")
+            bcol2.metric("Update Gap", f"{benchmark['update_gap_days']:.0f} days")
+            bcol3.metric("Favorite Rate", f"{benchmark['favorite_rate']:.4f}")
+            bcol4.metric("Engagement Rate", f"{benchmark['engagement_rate']:.4f}")
 
 # ─────────────────────────────────────────────────────
 # TAB 2 : MODEL ANALYTICS
