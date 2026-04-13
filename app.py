@@ -113,9 +113,6 @@ def get_contextual_benchmark(df, genre, age):
         (popular['AgeRecommendation'] == age)
     ]
 
-    if len(subset) < 30:
-        subset = popular
-
     subset['_fav_rate']  = subset['Favorites'] / subset['Visits'].replace(0, 1)
     subset['_eng_rate']  = (subset['Likes'] + subset['Dislikes']) / subset['Visits'].replace(0, 1)
     subset['_like_ratio'] = subset['Likes'] / (subset['Likes'] + subset['Dislikes'] + 1)
