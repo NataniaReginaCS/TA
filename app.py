@@ -128,7 +128,7 @@ def generate_recommendations(user_vals: dict, benchmark: dict) -> list:
     # ── 1. like_ratio ──────────────────────────────────────────────
     user_lr  = user_vals['like_ratio']
     bench_lr = benchmark['like_ratio']
-    if user_lr < bench_lr * 0.85:          # user lebih dari 15% di bawah benchmark
+    if user_lr < bench_lr:         
         pct_gap = (bench_lr - user_lr) / bench_lr * 100
         recs.append({
             'icon'  : '👍',
@@ -147,7 +147,7 @@ def generate_recommendations(user_vals: dict, benchmark: dict) -> list:
     user_ug  = user_vals['update_gap_days']
     bench_ug = benchmark['update_gap_days']
     
-    if user_ug > bench_ug * 1.5:           # user >50% lebih jarang update dari benchmark
+    if user_ug > bench_ug :          
         recs.append({
             'icon'  : '🔄',
             'title' : 'Frekuensi Update Terlalu Jarang',
@@ -163,7 +163,7 @@ def generate_recommendations(user_vals: dict, benchmark: dict) -> list:
     # ── 3. favorite_rate ───────────────────────────────────────────
     user_fr  = user_vals['favorite_rate']
     bench_fr = benchmark['favorite_rate']
-    if user_fr < bench_fr * 0.75:          # user lebih dari 25% di bawah benchmark
+    if user_fr < bench_fr:         
         pct_gap = (bench_fr - user_fr) / bench_fr * 100
         recs.append({
             'icon'  : '❤️',
@@ -181,7 +181,7 @@ def generate_recommendations(user_vals: dict, benchmark: dict) -> list:
     # ── 4. engagement_rate ─────────────────────────────────────────
     user_er  = user_vals['engagement_rate']
     bench_er = benchmark['engagement_rate']
-    if user_er < bench_er * 0.75:
+    if user_er < bench_er:
         pct_gap = (bench_er - user_er) / bench_er * 100
         recs.append({
             'icon'  : '💬',
