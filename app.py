@@ -99,17 +99,16 @@ def load_model_and_artifacts():
 # =====================================================
 @st.cache_data
 def get_popular_benchmarks(_df):
-    """Hitung median fitur dari game yang benar-benar populer (target=1)"""
-    popular = _df[_df['target'] == 1].copy()
-    
-    # Hitung rasio dari kolom mentah
-    popular['_fav_rate']  = popular['favorites'] / popular['visits'].replace(0, 1)
-    popular['_eng_rate']  = (popular['likes'] + popular['dislikes']) / popular['visits'].replace(0, 1)
-    popular['_like_ratio'] = popular['likes'] / (popular['likes'] + popular['dislikes'] + 1)
+    popular_indices = y_test[y_test == 1].index
+    popular = _df.loc[popular_indices].copy() if len(popular_indices) > 0 else _df[_df.index.isin([])].copy()
+
+    popular['_fav_rate']  = popular['Favorites'] / popular['Visits'].replace(0, 1)
+    popular['_eng_rate']  = (popular['Likes'] + popular['Dislikes']) / popular['Visits'].replace(0, 1)
+    popular['_like_ratio'] = popular['Likes'] / (popular['Likes'] + popular['Dislikes'] + 1)
     
     return {
         'game_age'        : popular['game_age'].median(),
-        'update_gap_days' : popular['update_gap_days'].median(),   # semakin kecil = semakin baik
+        'update_gap_days' : popular['update_gap_days'].median(),   
         'favorite_rate'   : popular['_fav_rate'].median(),
         'engagement_rate' : popular['_eng_rate'].median(),
         'like_ratio'      : popular['_like_ratio'].median(),
