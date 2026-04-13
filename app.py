@@ -112,11 +112,11 @@ def get_contextual_benchmark(df, genre, age):
     subset['_like_ratio'] = subset['Likes'] / (subset['Likes'] + subset['Dislikes'] + 1)
 
     return {
-        'game_age'        : subset['game_age'].min(),
-        'update_gap_days' : subset['update_gap_days'].min(),
-        'favorite_rate'   : subset['_fav_rate'].min(),
-        'engagement_rate' : subset['_eng_rate'].min(),
-        'like_ratio'      : subset['_like_ratio'].min(),
+        'game_age'        : subset['game_age'].median(),
+        'update_gap_days' : subset['update_gap_days'].median(),
+        'favorite_rate'   : subset['_fav_rate'].median(),
+        'engagement_rate' : subset['_eng_rate'].median(),
+        'like_ratio'      : subset['_like_ratio'].median(),
     }
 
 # =====================================================
@@ -326,18 +326,18 @@ with tab1:
         if benchmark is None:
             st.warning(f"⚠️ No benchmark data found for Genre '{genre}' and Age '{age_rec}'. Using dataset-wide averages instead.")
             benchmark = {
-                'game_age'        : df['game_age'].min(),
-                'update_gap_days' : df['update_gap_days'].min(),
-                'favorite_rate'   : (df['Favorites'] / df['Visits'].replace(0, 1)).min(),
-                'engagement_rate' : ((df['Likes'] + df['Dislikes']) / df['Visits'].replace(0, 1)).min(),
-                'like_ratio'      : (df['Likes'] / (df['Likes'] + df['Dislikes'] + 1)).min(),
+                'game_age'        : df['game_age'].median(),
+                'update_gap_days' : df['update_gap_days'].median(),
+                'favorite_rate'   : (df['Favorites'] / df['Visits'].replace(0, 1)).median(),
+                'engagement_rate' : ((df['Likes'] + df['Dislikes']) / df['Visits'].replace(0, 1)).median(),
+                'like_ratio'      : (df['Likes'] / (df['Likes'] + df['Dislikes'] + 1)).median(),
             }
         recs = generate_recommendations(user_vals, benchmark)
 
         if pred == 0:
             st.markdown("### 🛠️ **Panduan Peningkatan**")
             st.caption(
-                f"Perbandingan dilakukan terhadap minimum game populer genre **{genre}** usia **{age_rec}** di dataset. "
+                f"Perbandingan dilakukan terhadap median game populer genre **{genre}** usia **{age_rec}** di dataset. "
                 f"Hanya aspek yang benar-benar di bawah standar yang ditampilkan."
             )
 
@@ -391,10 +391,10 @@ with tab1:
         # ── Benchmark info ──
         with st.expander("📐 Lihat Benchmark Game Populer (referensi perbandingan)"):
             bcol1, bcol2, bcol3, bcol4 = st.columns(4)
-            bcol1.metric("Like Ratio (minimum)",       f"{benchmark['like_ratio']:.1%}")
-            bcol2.metric("Update Gap (minimum, hari)", f"{benchmark['update_gap_days']:.0f}")
-            bcol3.metric("Favorite Rate (minimum)",    f"{benchmark['favorite_rate']:.4f}")
-            bcol4.metric("Engagement Rate (minimum)",  f"{benchmark['engagement_rate']:.4f}")
+            bcol1.metric("Like Ratio (median)",       f"{benchmark['like_ratio']:.1%}")
+            bcol2.metric("Update Gap (median, hari)", f"{benchmark['update_gap_days']:.0f}")
+            bcol3.metric("Favorite Rate (median)",    f"{benchmark['favorite_rate']:.4f}")
+            bcol4.metric("Engagement Rate (median)",  f"{benchmark['engagement_rate']:.4f}")
             st.caption(f"Benchmark dibandingkan dengan game populer genre {genre} untuk usia {age_rec} dalam dataset Kaggle Roblox (9.734 game).")
 
 # ─────────────────────────────────────────────────────
