@@ -46,46 +46,16 @@ def load_artifacts():
         st.error(f"Model loading failed: {str(e)}")
         st.stop()
 
-# ─────────────────────────────────────────────────────────────────
-# BENCHMARK ENGINE
-#
-# Justifikasi MEDIAN (bukan mean):
-#   Distribusi fitur rasio bersifat highly right-skewed (dibuktikan
-#   pada EDA, histogram fitur Bab 4). Mean tertarik ke outlier dan
-#   tidak mewakili "game populer tipikal". Median robust terhadap
-#   outlier [Han et al., 2011] dan konsisten dengan pilihan kuartil
-#   (Q3) sebagai threshold definisi popularitas [Chen & Lu, 2023].
-#
-# Justifikasi threshold berbasis KUARTIL (data-driven):
-#   Threshold ditetapkan dari distribusi kuartil game populer
-#   [Tukey, 1977; Pargent et al., 2023]:
-#   - like_ratio, favorite_rate, engagement_rate -> trigger jika < Q1
-#     Makna: 75% game populer (Genre+Age sama) sudah lebih baik.
-#   - update_gap_days -> trigger jika > Q3 (besar = jarang update)
-#     Makna: 75% game populer (Genre+Age sama) lebih sering update.
-#
-# Hierarki fallback benchmark:
-#   Level 1 (paling spesifik): Genre + AgeRecommendation (min 3 game)
-#   Level 2: Genre saja                                   (min 5 game)
-#   Level 3 (global): Semua game populer
-# ─────────────────────────────────────────────────────────────────
 @st.cache_data
 def build_benchmark(_df):
-    """
-    Bangun benchmark dari game populer.
-    Kolom 'Active' digunakan langsung untuk menentukan popularitas
-    (Q3 dari log1p(Active)), konsisten dengan pipeline training.
-    """
     df_work = _df.copy()
 
-    # ── Buat kolom target dari Active (konsisten dengan notebook) ──
     active_log = np.log1p(df_work['Active'])
     threshold  = active_log.quantile(0.75)
     df_work['_popular'] = (active_log >= threshold).astype(int)
 
     pop = df_work[df_work['_popular'] == 1].copy()
 
-    # ── Hitung fitur rasio jika belum ada ──
     if 'like_ratio' not in pop.columns:
         pop['like_ratio']      = pop['Likes'] / (pop['Likes'] + pop['Dislikes'] + 1)
     if 'favorite_rate' not in pop.columns:
@@ -93,7 +63,6 @@ def build_benchmark(_df):
     if 'engagement_rate' not in pop.columns:
         pop['engagement_rate'] = (pop['Likes'] + pop['Dislikes']) / pop['Visits'].replace(0, 1)
     if 'update_gap_days' not in pop.columns:
-        # fallback jika kolom belum ada (seharusnya sudah ada dari notebook)
         pop['update_gap_days'] = (
             pd.to_datetime(pop['DateFetched']) - pd.to_datetime(pop['Updated'])
         ).dt.days.clip(lower=0)
@@ -110,16 +79,13 @@ def build_benchmark(_df):
             'engagement_rate' : iqr(grp['engagement_rate']),
         }
 
-    # Level 3 — Global
     global_bm = bm_stats(pop)
 
-    # Level 2 — Per Genre (min 5 game populer)
     genre_bm = {}
     for genre, grp in pop.groupby('Genre'):
         if len(grp) >= 5:
             genre_bm[genre] = {**bm_stats(grp), 'count': len(grp)}
 
-    # Level 1 — Per Genre + AgeRecommendation (min 3 game populer)
     combo_bm = {}
     for (genre, age), grp in pop.groupby(['Genre', 'AgeRecommendation']):
         if len(grp) >= 3:
@@ -129,10 +95,6 @@ def build_benchmark(_df):
 
 
 def get_best_benchmark(bm_global, bm_genre, bm_combo, user_genre, user_age):
-    """
-    Pilih benchmark terbaik dengan hierarki fallback.
-    Kembalikan (benchmark_dict, label_string, level_string).
-    """
     key = (user_genre, user_age)
     if key in bm_combo:
         bm    = bm_combo[key]
@@ -150,15 +112,10 @@ def get_best_benchmark(bm_global, bm_genre, bm_combo, user_genre, user_age):
     level = "global (genre/usia terlalu sedikit sampel)"
     return bm_global, label, level
 
-
 # ─────────────────────────────────────────────────────────────────
-# SMART RECOMMENDATION ENGINE
+# RECOMMENDATION
 # ─────────────────────────────────────────────────────────────────
 def generate_recommendations(user_vals, bm, bm_label):
-    """
-    Hasilkan rekomendasi berdasarkan perbandingan nilai user
-    terhadap kuartil distribusi game populer yang relevan.
-    """
     recs = []
 
     # 1. like_ratio — trigger jika < Q1
@@ -167,24 +124,24 @@ def generate_recommendations(user_vals, bm, bm_label):
         recs.append({'icon': '👍',
             'title': 'Like Ratio di Bawah Standar Game Populer Sejenis',
             'detail': (
-                f"Like ratio kamu **{user_vals['like_ratio']:.1%}** berada di bawah Q1 game populer "
-                f"pada {bm_label} (**Q1: {lr_q1:.1%}**, median: **{lr_med:.1%}**). "
-                "**75% game populer pada kategori yang sama sudah memiliki like ratio lebih tinggi.** "
-                "**Saran:** Minta feedback aktif dari pemain, perbaiki aspek yang paling dikritik "
+                f"Like ratio kamu {user_vals['like_ratio']:.1%} berada di bawah Q1 game populer "
+                f"pada {bm_label} (Q1: {lr_q1:.1%}, median: {lr_med:.1%}). "
+                "75% game populer pada kategori yang sama sudah memiliki like ratio lebih tinggi. "
+                "Saran: Minta feedback aktif dari pemain, perbaiki aspek yang paling dikritik "
                 "(kontrol, tingkat kesulitan, keseimbangan), dan perbarui thumbnail serta deskripsi game."),
             'priority': lr_med - user_vals['like_ratio']})
 
-    # 2. update_gap_days — trigger jika > Q3 (nilai besar = jarang update = buruk)
+    # 2. update_gap_days — trigger jika > Q3 
     ug_q3, ug_med = bm['update_gap_days']['q3'], bm['update_gap_days']['median']
     if user_vals['update_gap_days'] > ug_q3:
         recs.append({'icon': '🔄',
             'title': 'Frekuensi Update di Bawah Standar Game Populer Sejenis',
             'detail': (
-                f"Game kamu belum diperbarui selama **{user_vals['update_gap_days']:.0f} hari**, "
+                f"Game kamu belum diperbarui selama {user_vals['update_gap_days']:.0f} hari, "
                 f"melebihi Q3 update gap game populer pada {bm_label} "
-                f"(**Q3: {ug_q3:.0f} hari**, median: **{ug_med:.0f} hari**). "
-                "**75% game populer pada kategori yang sama melakukan update lebih sering.** "
-                "**Saran:** Rilis update berkala minimal 1–2 kali per bulan — bug fix, konten baru, "
+                f"(Q3: {ug_q3:.0f} hari, median: {ug_med:.0f} hari). "
+                "75% game populer pada kategori yang sama melakukan update lebih sering. "
+                "Saran: Rilis update berkala minimal 1–2 kali per bulan — bug fix, konten baru, "
                 "atau event musiman sudah cukup menjaga retensi pemain."),
             'priority': user_vals['update_gap_days'] - ug_med})
 
@@ -194,11 +151,11 @@ def generate_recommendations(user_vals, bm, bm_label):
         recs.append({'icon': '❤️',
             'title': 'Favorite Rate di Bawah Standar Game Populer Sejenis',
             'detail': (
-                f"Favorite rate kamu **{user_vals['favorite_rate']:.4f}** (favorit / kunjungan) "
+                f"Favorite rate kamu {user_vals['favorite_rate']:.4f} (favorit / kunjungan) "
                 f"berada di bawah Q1 game populer pada {bm_label} "
-                f"(**Q1: {fr_q1:.4f}**, median: **{fr_med:.4f}**). "
-                "**75% game populer pada kategori yang sama memiliki favorite rate lebih tinggi.** "
-                "**Saran:** Tambahkan insentif favorit — item eksklusif, reminder soft di akhir sesi, "
+                f"(Q1: {fr_q1:.4f}, median: {fr_med:.4f}). "
+                "75% game populer pada kategori yang sama memiliki favorite rate lebih tinggi. "
+                "Saran: Tambahkan insentif favorit — item eksklusif, reminder soft di akhir sesi, "
                 "atau konten yang membuat pemain ingin kembali lagi."),
             'priority': (fr_med - user_vals['favorite_rate']) * 100})
 
@@ -208,11 +165,11 @@ def generate_recommendations(user_vals, bm, bm_label):
         recs.append({'icon': '💬',
             'title': 'Engagement Rate di Bawah Standar Game Populer Sejenis',
             'detail': (
-                f"Engagement rate kamu **{user_vals['engagement_rate']:.4f}** "
+                f"Engagement rate kamu {user_vals['engagement_rate']:.4f} "
                 f"((like+dislike) / kunjungan) berada di bawah Q1 game populer pada {bm_label} "
-                f"(**Q1: {er_q1:.4f}**, median: **{er_med:.4f}**). "
-                "**75% game populer pada kategori yang sama memiliki engagement rate lebih tinggi.** "
-                "**Saran:** Tampilkan tombol rating secara menonjol, adakan tantangan komunitas, "
+                f"(Q1: {er_q1:.4f}, median: {er_med:.4f}). "
+                "75% game populer pada kategori yang sama memiliki engagement rate lebih tinggi. "
+                "Saran: Tampilkan tombol rating secara menonjol, adakan tantangan komunitas, "
                 "dan aktif merespons ulasan pemain di halaman game."),
             'priority': (er_med - user_vals['engagement_rate']) * 1000})
 
@@ -230,7 +187,7 @@ unique_genres = sorted(df.get("Genre", pd.Series()).dropna().unique().tolist())
 unique_ages   = sorted(df.get("AgeRecommendation", pd.Series()).dropna().unique().tolist())
 
 # ─────────────────────────────────────────────────────────────────
-# HEADER & METRICS
+# HEADER
 # ─────────────────────────────────────────────────────────────────
 st.markdown('<h1 class="main-header">🚀 Roblox Game Success Classification</h1>', unsafe_allow_html=True)
 st.markdown("<div style='text-align:center;color:#666;font-size:1.2rem;margin-bottom:2rem;'>Klasifikasi game populer dalam platform Roblox menggunakan <strong>Random Forest</strong></div>", unsafe_allow_html=True)
@@ -284,9 +241,9 @@ Genre + Age Recommendation — semakin spesifik, semakin relevan rekomendasinya.
             age_rec = st.selectbox("👶 **Age Rating**", options=unique_ages)
         with c2:
             game_age   = st.number_input("📅 **Game Age (days)**", min_value=0, value=300,
-                                          help="Hari sejak game pertama dibuat.")
+                                        help="Hari sejak game pertama dibuat.")
             update_gap = st.number_input("🔄 **Days Since Last Update**", min_value=0, value=30,
-                                          help="0 = baru saja diperbarui. Semakin kecil = semakin baik.")
+                                        help="0 = baru saja diperbarui. Semakin kecil = semakin baik.")
         c3, c4 = st.columns(2)
         with c3:
             visits    = st.number_input("👥 **Total Visits**", min_value=0, value=50000)
@@ -416,7 +373,7 @@ Genre + Age Recommendation — semakin spesifik, semakin relevan rekomendasinya.
                     'Median'       : fmt(bv['median']),
                     'Q3'           : fmt(bv['q3']),
                     'Threshold'    : (f"Q3 = {bv['q3']:.0f} hari" if is_ug
-                                      else f"Q1 = {bv['q1']:.4f}"),
+                                    else f"Q1 = {bv['q1']:.4f}"),
                     'Status'       : "✅ Sudah baik" if ok else "⚠️ Perlu ditingkatkan",
                 })
             st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
@@ -429,15 +386,15 @@ Genre + Age Recommendation — semakin spesifik, semakin relevan rekomendasinya.
 
             level_df = pd.DataFrame([
                 {'Level'     : f'Genre + Age ({genre} × {age_rec})',
-                 'Sample'    : combo_count,
-                 'Digunakan' : '✅' if combo_key in bm_combo else '❌ (< 3 game populer)'},
+                'Sample'    : combo_count,
+                'Digunakan' : '✅' if combo_key in bm_combo else '❌ (< 3 game populer)'},
                 {'Level'     : f'Genre saja ({genre})',
-                 'Sample'    : genre_count,
-                 'Digunakan' : ('✅' if combo_key not in bm_combo and genre in bm_genre
+                'Sample'    : genre_count,
+                'Digunakan' : ('✅' if combo_key not in bm_combo and genre in bm_genre
                                 else ('—' if combo_key in bm_combo else '❌ (< 5 game populer)'))},
                 {'Level'     : 'Global (semua game populer)',
-                 'Sample'    : bm_global.get('count', 'semua'),
-                 'Digunakan' : ('✅' if combo_key not in bm_combo and genre not in bm_genre
+                'Sample'    : bm_global.get('count', 'semua'),
+                'Digunakan' : ('✅' if combo_key not in bm_combo and genre not in bm_genre
                                 else '—')},
             ])
             st.dataframe(level_df, use_container_width=True, hide_index=True)
@@ -454,7 +411,7 @@ with tab2:
         fig, ax = plt.subplots(figsize=(5, 3))
         tc   = pd.Series(y_test).value_counts().sort_index()
         bars = ax.bar(tc.index, tc.values,
-                      color=['#ff9999','#66b3ff'], alpha=0.8, edgecolor='white', linewidth=2)
+                    color=['#ff9999','#66b3ff'], alpha=0.8, edgecolor='white', linewidth=2)
         ax.set_xticks([0,1]); ax.set_xticklabels(['Not Popular','Popular'], fontweight='bold')
         ax.set_ylabel('Count', fontweight='bold')
         ax.set_title('Game Popularity Distribution', fontsize=12, fontweight='bold', pad=10)
@@ -523,7 +480,7 @@ with tab3:
         disp.columns = ['Age Recommendation','Total Games','Success Rate (%)']
         st.dataframe(
             disp.style.format({'Total Games':'{:.0f}','Success Rate (%)':'{:.1f}'})
-                      .background_gradient(subset=['Success Rate (%)'], cmap='plasma'),
+                    .background_gradient(subset=['Success Rate (%)'], cmap='plasma'),
             use_container_width=True, height=200)
     except Exception as e:
         st.error(f"Error: {e}")
@@ -540,7 +497,7 @@ with tab3:
         disp.columns = ['Genre','Total Games','Success Rate (%)']
         st.dataframe(
             disp.style.format({'Total Games':'{:.0f}','Success Rate (%)':'{:.1f}'})
-                      .background_gradient(subset=['Success Rate (%)'], cmap='viridis'),
+                    .background_gradient(subset=['Success Rate (%)'], cmap='viridis'),
             use_container_width=True, height=300)
     except Exception as e:
         st.error(f"Error: {e}")
@@ -559,7 +516,7 @@ with tab3:
             fig, ax = plt.subplots(figsize=(7,5))
             t10  = top_imp.sort_values('Importance')
             bars = ax.barh(range(len(t10)), t10['Importance'],
-                           color=plt.cm.plasma(np.linspace(0,1,len(t10))), alpha=0.8)
+                        color=plt.cm.plasma(np.linspace(0,1,len(t10))), alpha=0.8)
             ax.set_yticks(range(len(t10)))
             ax.set_yticklabels(
                 [str(f)[:25]+'...' if len(str(f))>25 else str(f) for f in t10['Fitur']], fontsize=9)
