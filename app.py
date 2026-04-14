@@ -98,13 +98,13 @@ def get_best_benchmark(bm_global, bm_genre, bm_combo, user_genre, user_age):
     key = (user_genre, user_age)
     if key in bm_combo:
         bm    = bm_combo[key]
-        label = f"genre **{user_genre}** + usia **{user_age}**"
+        label = f"genre {user_genre} + usia {user_age}"
         level = f"spesifik ({bm['count']} game populer)"
         return bm, label, level
 
     if user_genre in bm_genre:
         bm    = bm_genre[user_genre]
-        label = f"genre **{user_genre}**"
+        label = f"genre {user_genre}"
         level = f"genre saja ({bm['count']} game populer, usia '{user_age}' digabung)"
         return bm, label, level
 
