@@ -352,7 +352,7 @@ Genre + Age Recommendation — semakin spesifik, semakin relevan rekomendasinya.
         with st.expander(f"📐 Detail Benchmark — Genre: {genre} | Age: {age_rec}"):
             st.markdown(f"**Level benchmark yang digunakan:** {bm_level}")
             st.info(
-                "**Dasar threshold (data-driven, bukan arbitrer):**\n"
+                "**Dasar threshold:**\n"
                 "- `like_ratio`, `favorite_rate`, `engagement_rate` → rekomendasi jika di bawah "
                 "**Q1** (75% game populer sejenis sudah lebih baik)\n"
                 "- `update_gap_days` → rekomendasi jika di atas **Q3** "
