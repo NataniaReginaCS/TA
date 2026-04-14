@@ -225,6 +225,7 @@ Model Random Forest dilatih dari 9.734 data game Roblox (Kaggle).
 - **Ambang batas sangat ketat** — hanya top 25% yang dianggap populer.
 - **Game terlalu baru** — pola interaksi belum terbentuk secara representatif.
 - **Dataset statis** — tidak menangkap dinamika jangka panjang atau tren musiman.
+- **Jumlah kunjungan rendah** — model lebih cenderung memprediksi game dengan jumlah kunjungan tinggi.
 - Model ini adalah **alat bantu analitis**, bukan jaminan kesuksesan.
 
 **Bagaimana panduan peningkatan ditentukan?**
