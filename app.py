@@ -66,6 +66,10 @@ def build_benchmark(_df):
         pop['update_gap_days'] = (
             pd.to_datetime(pop['DateFetched']) - pd.to_datetime(pop['Updated'])
         ).dt.days.clip(lower=0)
+    if 'game_age' not in pop.columns:
+        pop['game_age'] = (
+            pd.to_datetime(pop['DateFetched']) - pd.to_datetime(pop['Created'])
+        ).dt.days.clip(lower=0)
 
     def iqr(s):
         s = s.replace([np.inf, -np.inf], np.nan).dropna()
@@ -77,6 +81,7 @@ def build_benchmark(_df):
             'update_gap_days' : iqr(grp['update_gap_days']),
             'favorite_rate'   : iqr(grp['favorite_rate']),
             'engagement_rate' : iqr(grp['engagement_rate']),
+            'game_age'        : iqr(grp['game_age'])
         }
 
     global_bm = bm_stats(pop)
@@ -98,7 +103,7 @@ def get_best_benchmark(bm_global, bm_genre, bm_combo, user_genre, user_age):
     key = (user_genre, user_age)
     if key in bm_combo:
         bm    = bm_combo[key]
-        label = f"genre {user_genre} + usia {user_age}"
+        label = f"genre {user_genre} + usia {user_age}" 
         level = f"spesifik ({bm['count']} game populer)"
         return bm, label, level
 
@@ -172,6 +177,19 @@ def generate_recommendations(user_vals, bm, bm_label):
                 "Saran: Tampilkan tombol rating secara menonjol, adakan tantangan komunitas, "
                 "dan aktif merespons ulasan pemain di halaman game."),
             'priority': (er_med - user_vals['engagement_rate']) * 1000})
+        
+    # 5. game_age — trigger jika < Q1
+    ga_q1, ga_med = bm['game_age']['q1'], bm['game_age']['median']
+    if user_vals['game_age'] < ga_q1:
+        recs.append({'icon': '⏱️',
+            'title': 'Usia Game di Bawah Standar Game Populer Sejenis',
+            'detail': (
+                f"Game kamu berusia {user_vals['game_age']:.0f} hari, "
+                f"di bawah Q1 usia game populer pada {bm_label} "
+                f"(Q1: {ga_q1:.0f} hari, median: {ga_med:.0f} hari). "
+                "75% game populer pada kategori yang sama memiliki usia lebih tua. "
+                "Saran: Pertimbangkan untuk memperbarui konten game secara berkala atau menambahkan fitur baru untuk menjaga daya tarik pemain."),
+            'priority': (ga_med - user_vals['game_age']) * 100})
 
     recs.sort(key=lambda x: x['priority'], reverse=True)
     return recs
@@ -296,6 +314,7 @@ Genre + Age Recommendation — semakin spesifik, semakin relevan rekomendasinya.
             'update_gap_days' : float(update_gap),
             'favorite_rate'   : fav_rate,
             'engagement_rate' : eng_rate,
+            'game_age'        : game_age
         }
         bm, bm_label, bm_level = get_best_benchmark(
             bm_global, bm_genre, bm_combo, genre, age_rec)
@@ -354,14 +373,14 @@ Genre + Age Recommendation — semakin spesifik, semakin relevan rekomendasinya.
             st.markdown(f"**Level benchmark yang digunakan:** {bm_level}")
             st.info(
                 "**Dasar threshold:**\n"
-                "- `like_ratio`, `favorite_rate`, `engagement_rate` → rekomendasi jika di bawah "
+                "- `like_ratio`, `favorite_rate`, `engagement_rate`, `game_age` → rekomendasi jika di bawah "
                 "**Q1** (75% game populer sejenis sudah lebih baik)\n"
                 "- `update_gap_days` → rekomendasi jika di atas **Q3** "
                 "(75% game populer sejenis lebih sering update)")
 
             # Tabel perbandingan nilai user vs benchmark
             rows = []
-            for feat in ['like_ratio', 'update_gap_days', 'favorite_rate', 'engagement_rate']:
+            for feat in ['like_ratio', 'update_gap_days', 'favorite_rate', 'engagement_rate', 'game_age']:
                 user_v = user_vals[feat]
                 bv     = bm[feat]
                 is_ug  = feat == 'update_gap_days'
