@@ -385,15 +385,22 @@ Genre + Age Recommendation — semakin spesifik, semakin relevan rekomendasinya.
                 is_day = feat in ['update_gap_days', 'game_age']
                 fmt    = (lambda x: f"{x:.0f} hari") if is_day else (lambda x: f"{x:.4f}")
                 ok     = user_v <= bv['q3'] if is_ug else user_v >= bv['q1']
+
+                if is_day:
+                    if is_ug:
+                        threshold_text = f"Q3 = {bv['q3']:.0f} hari"
+                    else: 
+                        threshold_text = f"Q1 = {bv['q1']:.0f} hari"
+                else:
+                    threshold_text = f"Q1 = {bv['q1']:.4f}"
+
                 rows.append({
                     'Fitur'        : feat,
                     'Nilai Kamu'   : fmt(user_v),
                     'Q1'           : fmt(bv['q1']),
                     'Median'       : fmt(bv['median']),
                     'Q3'           : fmt(bv['q3']),
-                    'Threshold'    : (f"Q3 = {bv['q3']:.0f} hari" if is_ug
-                        
-                                    else f"Q1 = {bv['q1']:.4f}"), 
+                    'Threshold'    : threshold_text,
                     'Status'       : "✅ Sudah baik" if ok else "⚠️ Perlu ditingkatkan",
                 })
             st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
