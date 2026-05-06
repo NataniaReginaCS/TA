@@ -381,7 +381,7 @@ Genre + Age Recommendation — semakin spesifik, semakin relevan rekomendasinya.
             for feat in ['like_ratio', 'update_gap_days', 'favorite_rate', 'engagement_rate', 'game_age']:
                 user_v = user_vals[feat]
                 bv     = bm[feat]
-                is_ug  = feat == 'update_gap_days'
+                is_ug  = feat in ['update_gap_days', 'game_age']
                 fmt    = (lambda x: f"{x:.0f} hari") if is_ug else (lambda x: f"{x:.4f}")
                 ok     = user_v <= bv['q3'] if is_ug else user_v >= bv['q1']
                 rows.append({
@@ -391,7 +391,7 @@ Genre + Age Recommendation — semakin spesifik, semakin relevan rekomendasinya.
                     'Median'       : fmt(bv['median']),
                     'Q3'           : fmt(bv['q3']),
                     'Threshold'    : (f"Q3 = {bv['q3']:.0f} hari" if is_ug
-                                    else f"Q1 = {bv['q1']:.4f}"),
+                                    else f"Q1 = {bv['q1']:.4f}"), 
                     'Status'       : "✅ Sudah baik" if ok else "⚠️ Perlu ditingkatkan",
                 })
             st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
