@@ -241,7 +241,6 @@ Model Random Forest dilatih dari 9.734 data game Roblox (Kaggle).
 **Mengapa game saya bisa tidak populer meskipun semua fitur sudah baik?**
 - Model mempertimbangkan **kombinasi** semua fitur sekaligus, bukan satu per satu.
 - **Ambang batas sangat ketat** — hanya top 25% yang dianggap populer.
-- **Game terlalu baru** — pola interaksi belum terbentuk secara representatif.
 - **Dataset statis** — tidak menangkap dinamika jangka panjang atau tren musiman.
 - **Jumlah kunjungan rendah** — model lebih cenderung memprediksi game dengan jumlah kunjungan tinggi.
 - Model ini adalah **alat bantu analitis**, bukan jaminan kesuksesan.
@@ -360,7 +359,6 @@ Genre + Age Recommendation — semakin spesifik, semakin relevan rekomendasinya.
                     "tetap memprediksi tidak populer. Kemungkinan penyebabnya:\n\n"
                     "- **Kombinasi fitur:** Model RF mempertimbangkan interaksi antar semua "
                     "fitur sekaligus — ada pola kombinasi yang belum optimal.\n"
-                    "- **Game terlalu baru:** Pola interaksi belum terbentuk secara representatif.\n"
                     "- **Kompetisi ketat:** Ambang popularitas top 25% memang sangat tinggi.\n"
                     "- **Keterbatasan model:** Dataset statis tidak menangkap dinamika jangka panjang.")
             else:
