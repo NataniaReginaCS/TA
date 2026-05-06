@@ -241,12 +241,12 @@ Model Random Forest dilatih dari 9.734 data game Roblox (Kaggle).
 **Mengapa game saya bisa tidak populer meskipun semua fitur sudah baik?**
 - Model mempertimbangkan **kombinasi** semua fitur sekaligus, bukan satu per satu.
 - **Ambang batas sangat ketat** — hanya top 25% yang dianggap populer.
-- **Dataset statis** — tidak menangkap dinamika jangka panjang atau tren musiman.
+- **Dataset statis** — tidak menangkap dinamika jangka panjang.
 - **Jumlah kunjungan rendah** — model lebih cenderung memprediksi game dengan jumlah kunjungan tinggi.
 - Model ini adalah **alat bantu analitis**, bukan jaminan kesuksesan.
 
 **Bagaimana panduan peningkatan ditentukan?**
-Panduan muncul hanya jika nilai kamu berada **di bawah Q1 distribusi game populer
+Panduan muncul hanya jika nilai kamu berada **di bawah Q1 atau di atas Q3 distribusi game populer
 pada genre dan kategori usia yang sama**. Benchmark dicari berdasarkan kombinasi
 Genre + Age Recommendation — semakin spesifik, semakin relevan rekomendasinya.
         """)
