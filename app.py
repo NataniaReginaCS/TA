@@ -36,11 +36,7 @@ def load_artifacts():
         y_pred      = joblib.load("y_pred.pkl")
         y_prob      = joblib.load("y_prob.pkl")
         metrics     = joblib.load("metrics.pkl")
-        df_imp = None
-        try:
-            df_imp = joblib.load("feature_importance_df.pkl")
-        except Exception:
-            pass
+        df_imp      = joblib.load("feature_importance_df.pkl")
         return final_model, df, X_test, y_test, y_pred, y_prob, metrics, df_imp
     except Exception as e:
         st.error(f"Model loading failed: {str(e)}")
