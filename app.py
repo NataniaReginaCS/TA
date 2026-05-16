@@ -205,12 +205,12 @@ unique_ages   = sorted(df.get("AgeRecommendation", pd.Series()).dropna().unique(
 st.markdown('<h1 class="main-header">🚀 Roblox Game Success Classification</h1>', unsafe_allow_html=True)
 st.markdown("<div style='text-align:center;color:#666;font-size:1.2rem;margin-bottom:2rem;'>Klasifikasi game populer dalam platform Roblox menggunakan <strong>Random Forest</strong></div>", unsafe_allow_html=True)
 st.markdown("### 📊 **Model Performance Overview**")
-cols = st.columns(7)
+cols = st.columns(4)
 for col, (label, val) in zip(cols, [
     ("Accuracy",     f"{metrics['accuracy']:.1%}"),
     ("F1 macro",     f"{metrics.get('f1_score_macro', metrics['f1_score']):.3f}"),
-    ("Prec macro",   f"{metrics.get('precision_macro', metrics['precision']):.3f}"),
-    ("Rec macro",    f"{metrics.get('recall_macro', metrics['recall']):.3f}"),
+    ("Precision macro",   f"{metrics.get('precision_macro', metrics['precision']):.3f}"),
+    ("Recall macro",    f"{metrics.get('recall_macro', metrics['recall']):.3f}"),
 ]):
     with col:
         st.markdown(f'<div class="metric-card"><h3>{label}</h3><h2>{val}</h2></div>',
@@ -229,6 +229,17 @@ with tab1:
 **Bagaimana model ini bekerja?**
 Model Random Forest dilatih dari 9.734 data game Roblox (Kaggle).
 **"Populer"** = game di **persentil ke-75 ke atas** berdasarkan jumlah pemain aktif — hanya ~25% game teratas.
+
+Model menganalisis beberapa atribut game Roblox, seperti:
+- **Like Ratio**
+- **Engagement Rate**
+- **Favorite Rate**
+- **Usia Game**
+- **Frekuensi Update**
+- **Genre**
+- **Age Recommendation**
+
+Fitur-fitur tersebut digunakan untuk memprediksi potensi popularitas game berdasarkan pola dari dataset Roblox.
 
 **Mengapa game saya bisa tidak populer meskipun semua fitur sudah baik?**
 - Model mempertimbangkan **kombinasi** semua fitur sekaligus, bukan satu per satu.
@@ -476,9 +487,9 @@ with tab2:
         agar game populer tidak terlewatkan.
         <b>Classification report</b> 
         <ul>
-            <li><b>Precision:</b> </li>f"{metrics['precision']:.3f}"
-            <li><b>Recall:</b> </li>f"{metrics['recall']:.3f}"
-            <li><b>F1-score:</b> </li>f"{metrics['f1_score']:.3f}"
+            <li><b>Precision: {metrics['precision']:.2f}</b> </li>"
+            <li><b>Recall: {metrics['recall']:.2f}</b> </li>"
+            <li><b>F1-score: {metrics['f1_score']:.2f}</b> </li>
         </div>""", unsafe_allow_html=True)
 
 # ═══════════════════════════════════════════════════════════════
@@ -488,8 +499,8 @@ with tab3:
     st.markdown("---")
     c1, c2, c3 = st.columns(3)
     c1.metric("📊 Total Samples", f"{len(df):,}")
-    c2.metric("🔧 Features", df.shape[1])
-    c3.metric("🗂️ Dataset", "Kaggle Roblox Dataset")
+    c2.metric("🔧 Features", "16")
+    c3.markdown("[🗂️ Dataset](https://www.kaggle.com/datasets/databitio/roblox-games-data)", unsafe_allow_html=True)
     st.markdown("---")
 
     st.subheader("👶 Success Rate by Age Recommendation")
@@ -532,42 +543,40 @@ with tab3:
     except Exception:
         st.warning("Dataset summary temporarily unavailable")
 
-    if df_imp is not None and len(df_imp) > 0:
-        st.subheader("🏆 Top 10 Feature Importance")
-        top_imp = df_imp.nlargest(10, 'Importance')[['Fitur','Importance']]
-        ci1, ci2 = st.columns([1, 2])
-        with ci1:
-            fig, ax = plt.subplots(figsize=(7,5))
-            t10  = top_imp.sort_values('Importance')
-            bars = ax.barh(range(len(t10)), t10['Importance'],
-                        color=plt.cm.plasma(np.linspace(0,1,len(t10))), alpha=0.8)
-            ax.set_yticks(range(len(t10)))
-            ax.set_yticklabels(
-                [str(f)[:25]+'...' if len(str(f))>25 else str(f) for f in t10['Fitur']], fontsize=9)
-            ax.set_xlabel('Importance Score', fontweight='bold')
-            ax.set_title('Feature Importance', fontsize=12, fontweight='bold', pad=10)
-            ax.grid(axis='x', alpha=0.3)
-            for i, bar in enumerate(bars):
-                w = bar.get_width()
-                ax.text(w+0.0005, i, f'{w:.4f}', va='center', fontweight='bold', fontsize=9)
-            plt.tight_layout(); st.pyplot(fig)
-        with ci2:
-            st.markdown("""<div style='font-size:1.1rem;'>
-            <b>Feature Importance</b> — kontribusi tiap fitur dalam keputusan model RF:<br><br>
-            <ul>
-                <li><b>like_ratio</b> (0.230): Proporsi like dari total interaksi</li>
-                <li><b>update_gap_days</b> (0.165): Hari sejak update terakhir</li>
-                <li><b>engagement_rate</b> (0.141): Rasio interaksi per kunjungan</li>
-                <li><b>favorite_rate</b> (0.137): Proporsi pemain yang memfavoritkan game</li>
-                <li><b>game_age</b> (0.110): Usia game dalam hari</li>
-            </ul>
-            Dominasi fitur numerik hasil rekayasa memvalidasi tahap <i>feature engineering</i>.
-            </div>""", unsafe_allow_html=True)
-        ti = top_imp.copy(); ti['Importance'] = ti['Importance'].round(4)
-        st.dataframe(ti.style.background_gradient(cmap='plasma'), use_container_width=True)
+    st.subheader("🏆 Top 10 Feature Importance")
+    top_imp = df_imp.nlargest(10, 'Importance')[['Fitur','Importance']]
+    ci1, ci2 = st.columns([1, 2])
+    with ci1:
+        fig, ax = plt.subplots(figsize=(7,5))
+        t10  = top_imp.sort_values('Importance')
+        bars = ax.barh(range(len(t10)), t10['Importance'],
+                    color=plt.cm.plasma(np.linspace(0,1,len(t10))), alpha=0.8)
+        ax.set_yticks(range(len(t10)))
+        ax.set_yticklabels(
+            [str(f)[:25]+'...' if len(str(f))>25 else str(f) for f in t10['Fitur']], fontsize=9)
+        ax.set_xlabel('Importance Score', fontweight='bold')
+        ax.set_title('Feature Importance', fontsize=12, fontweight='bold', pad=10)
+        ax.grid(axis='x', alpha=0.3)
+        for i, bar in enumerate(bars):
+            w = bar.get_width()
+            ax.text(w+0.0005, i, f'{w:.3f}', va='center', fontweight='bold', fontsize=9)
+        plt.tight_layout(); st.pyplot(fig)
+    with ci2:
+        st.markdown("""<div style='font-size:1.1rem;'>
+        <b>Feature Importance</b> — kontribusi tiap fitur dalam keputusan model RF:<br><br>
+        <ul>
+            <li><b>like_ratio</b> : Proporsi like dari total interaksi</li>
+            <li><b>update_gap_days</b> : Hari sejak update terakhir</li>
+            <li><b>engagement_rate</b> : Rasio interaksi per kunjungan</li>
+            <li><b>favorite_rate</b> : Proporsi pemain yang memfavoritkan game</li>
+            <li><b>game_age</b> : Usia game dalam hari</li>
+        </ul>
+        </div>""", unsafe_allow_html=True)
+    ti = top_imp.copy(); ti['Importance'] = ti['Importance'].round(3)
+    st.dataframe(ti.style.background_gradient(cmap='plasma'), use_container_width=True)
 
 st.markdown("---")
 st.markdown(
     "<div style='text-align:center;color:#aaa;font-size:0.85rem;'>"
-    "Roblox Game Success Classifier · Random Forest · Dataset: Kaggle Roblox (9.734 games)"
+    "Roblox Game Success Classifier · Random Forest · Dataset: Kaggle Roblox (9.734 data)"
     "</div>", unsafe_allow_html=True)
