@@ -209,9 +209,6 @@ st.markdown("### 📊 **Model Performance Overview**")
 cols = st.columns(7)
 for col, (label, val) in zip(cols, [
     ("Accuracy",     f"{metrics['accuracy']:.1%}"),
-    ("F1 Score",     f"{metrics['f1_score']:.3f}"),
-    ("Precision",    f"{metrics['precision']:.3f}"),
-    ("Recall",       f"{metrics['recall']:.3f}"),
     ("F1 macro",     f"{metrics.get('f1_score_macro', metrics['f1_score']):.3f}"),
     ("Prec macro",   f"{metrics.get('precision_macro', metrics['precision']):.3f}"),
     ("Rec macro",    f"{metrics.get('recall_macro', metrics['recall']):.3f}"),
@@ -478,6 +475,11 @@ with tab2:
         </ul>
         Parameter <code>class_weight='balanced'</code> menekan False Negative
         agar game populer tidak terlewatkan.
+        <b>Classification report</b> 
+        <ul>
+            <li><b>Precision:</b> </li>f"{metrics['precision']:.3f}"
+            <li><b>Recall:</b> </li>f"{metrics['recall']:.3f}"
+            <li><b>F1-score:</b> </li>f"{metrics['f1_score']:.3f}"
         </div>""", unsafe_allow_html=True)
 
 # ═══════════════════════════════════════════════════════════════
