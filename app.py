@@ -34,10 +34,9 @@ def load_artifacts():
         X_test      = joblib.load("X_test.pkl")
         y_test      = joblib.load("y_test.pkl")
         y_pred      = joblib.load("y_pred.pkl")
-        y_prob      = joblib.load("y_prob.pkl")
         metrics     = joblib.load("metrics.pkl")
         df_imp      = joblib.load("feature_importance_df.pkl")
-        return final_model, df, X_test, y_test, y_pred, y_prob, metrics, df_imp
+        return final_model, df, X_test, y_test, y_pred, metrics, df_imp
     except Exception as e:
         st.error(f"Model loading failed: {str(e)}")
         st.stop()
@@ -194,7 +193,7 @@ def generate_recommendations(user_vals, bm, bm_label):
 # ─────────────────────────────────────────────────────────────────
 # INIT
 # ─────────────────────────────────────────────────────────────────
-final_model, df, X_test, y_test, y_pred, y_prob, metrics, df_imp = load_artifacts()
+final_model, df, X_test, y_test, y_pred, metrics, df_imp = load_artifacts()
 bm_global, bm_genre, bm_combo = build_benchmark(df)
 
 unique_genres = sorted(df.get("Genre", pd.Series()).dropna().unique().tolist())
