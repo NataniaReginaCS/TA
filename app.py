@@ -207,10 +207,10 @@ st.markdown("<div style='text-align:center;color:#666;font-size:1.2rem;margin-bo
 st.markdown("### 📊 **Model Performance Overview**")
 cols = st.columns(4)
 for col, (label, val) in zip(cols, [
-    ("Accuracy",     f"{metrics['accuracy']:.1%}"),
-    ("F1 macro",     f"{metrics.get('f1_score_macro', metrics['f1_score']):.3f}"),
-    ("Precision macro",   f"{metrics.get('precision_macro', metrics['precision']):.3f}"),
-    ("Recall macro",    f"{metrics.get('recall_macro', metrics['recall']):.3f}"),
+    ("Accuracy",     f"{metrics['accuracy']:.0%}"),
+    ("F1 macro",     f"{metrics.get('f1_score_macro', metrics['f1_score']):.2f}"),
+    ("Precision macro",   f"{metrics.get('precision_macro', metrics['precision']):.2f}"),
+    ("Recall macro",    f"{metrics.get('recall_macro', metrics['recall']):.2f}"),
 ]):
     with col:
         st.markdown(f'<div class="metric-card"><h3>{label}</h3><h2>{val}</h2></div>',
@@ -485,10 +485,11 @@ with tab2:
         </ul>
         Parameter <code>class_weight='balanced'</code> menekan False Negative
         agar game populer tidak terlewatkan.
+        <br><br>
         <b>Classification report</b> 
         <ul>
-            <li><b>Precision: {metrics['precision']:.2f}</b> </li>"
-            <li><b>Recall: {metrics['recall']:.2f}</b> </li>"
+            <li><b>Precision: {metrics['precision']:.2f}</b> </li>
+            <li><b>Recall: {metrics['recall']:.2f}</b> </li>
             <li><b>F1-score: {metrics['f1_score']:.2f}</b> </li>
         </div>""", unsafe_allow_html=True)
 
@@ -498,9 +499,22 @@ with tab2:
 with tab3:
     st.markdown("---")
     c1, c2, c3 = st.columns(3)
-    c1.metric("📊 Total Samples", f"{len(df):,}")
-    c2.metric("🔧 Features", "16")
-    c3.markdown("[🗂️ Dataset](https://www.kaggle.com/datasets/databitio/roblox-games-data)", unsafe_allow_html=True)
+    with c1:
+        st.markdown(
+            '<div class="metric-card"><h3>📊 Total Samples</h3>'
+            f'<h2>{len(df):,}</h2></div>',
+            unsafe_allow_html=True)
+    with c2:
+        st.markdown(
+            '<div class="metric-card"><h3>🔧 Features</h3>'
+            f'<h2>{df.shape[1]}</h2></div>',
+            unsafe_allow_html=True)
+    with c3:
+        st.markdown(
+            '<div class="metric-card"><h3>🗂️ Dataset</h3>'
+            '<h2><a href="https://www.kaggle.com/datasets/jansenccruz/roblox-dataset" '
+            'style="color:#1f77b4;text-decoration:none;">Kaggle Roblox Dataset</a></h2></div>',
+            unsafe_allow_html=True)
     st.markdown("---")
 
     st.subheader("👶 Success Rate by Age Recommendation")
@@ -573,7 +587,7 @@ with tab3:
         </ul>
         </div>""", unsafe_allow_html=True)
     ti = top_imp.copy(); ti['Importance'] = ti['Importance'].round(3)
-    st.dataframe(ti.style.background_gradient(cmap='plasma'), use_container_width=True)
+    st.dataframe(ti.style.format({'Importance': '{:.3f}'}).background_gradient(cmap='plasma'), use_container_width=True)
 
 st.markdown("---")
 st.markdown(
